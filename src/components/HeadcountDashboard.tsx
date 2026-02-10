@@ -157,25 +157,74 @@ const HeadcountDashboard: React.FC = () => {
               <KpiCard label="Utilization" value={`${metrics.capacityUtilization.toFixed(1)}%`} sub={`${fmtNum(metrics.totalEnrolled)} / ${fmtNum(metrics.totalCapacity)} seats`} />
             </div>
 
-            {/* CHARTS ROW */}
+            {/* CHARTS + DRIVER TABLE ROW */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* PIE: Cost by Driver */}
-              <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-                <h3 className="text-sm font-semibold text-slate-300 mb-4">OOM Cost by Driver Category</h3>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: '#475569' }}
-                      fontSize={11} fill="#8884d8">
-                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0' }} />
-                  </PieChart>
-                </ResponsiveContainer>
+              {/* LEFT COLUMN: Pie + Driver Table */}
+              <div className="space-y-6">
+                <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                  <h3 className="text-sm font-semibold text-slate-300 mb-4">OOM Cost by Driver Category</h3>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={45}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={{ stroke: '#475569' }}
+                        fontSize={10} fill="#8884d8">
+                        {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Driver Summary Table — directly under pie */}
+                <div className="table-card">
+                  <div className="px-5 py-3 border-b border-slate-700">
+                    <h3 className="text-sm font-semibold text-slate-300">Cost by Driver Category</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Click a row to expand</p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className="text-left px-5 py-2 text-xs uppercase">Driver</th>
+                        <th className="text-right px-3 py-2 text-xs uppercase">Excess</th>
+                        <th className="text-right px-3 py-2 text-xs uppercase">Cost</th>
+                        <th className="text-right px-3 py-2 text-xs uppercase">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {drivers.map(d => (
+                        <React.Fragment key={d.driver}>
+                          <tr className="cursor-pointer hover:bg-slate-700/50 transition-colors" onClick={() => setExpandedDriver(expandedDriver === d.driver ? null : d.driver)}>
+                            <td className="px-5 py-2 font-medium text-sm">
+                              <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: d.color }} />
+                              {expandedDriver === d.driver ? '▼' : '▶'} {d.driver}
+                            </td>
+                            <td className={`text-right px-3 py-2 font-mono text-sm ${d.excessGuides > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{varianceText(d.excessGuides)}</td>
+                            <td className="text-right px-3 py-2 font-mono text-sm">{fmt(d.annualCost)}</td>
+                            <td className="text-right px-3 py-2 text-sm">{d.pctOfTotal.toFixed(0)}%</td>
+                          </tr>
+                          {expandedDriver === d.driver && driverSchools(d.driver).map(s => (
+                            <tr key={s.name} className="bg-slate-800/50">
+                              <td className="px-5 py-1.5 pl-9 text-xs text-slate-400">{s.name.replace(/^Alpha (School: )?/, '')}</td>
+                              <td className={`text-right px-3 py-1.5 text-xs font-mono ${varianceClass(s.variance)}`}>{varianceText(s.variance)}</td>
+                              <td className="text-right px-3 py-1.5 text-xs font-mono">{s.annualCost !== 0 ? fmt(s.annualCost) : '—'}</td>
+                              <td className="text-right px-3 py-1.5 text-xs">{s.studentGuideRatio}</td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                      <tr className="font-bold border-t border-slate-600">
+                        <td className="px-5 py-2">TOTAL</td>
+                        <td className="text-right px-3 py-2 font-mono text-red-400">+{drivers.reduce((s, d) => s + Math.max(d.excessGuides, 0), 0)}</td>
+                        <td className="text-right px-3 py-2 font-mono">{fmt(drivers.reduce((s, d) => s + d.annualCost, 0))}</td>
+                        <td className="text-right px-3 py-2">100%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* BAR: Top excess schools */}
+              {/* RIGHT COLUMN: Bar chart + cost/student table */}
               <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
                 <h3 className="text-sm font-semibold text-slate-300 mb-4">Top Schools by Annual OOM Cost</h3>
                 <ResponsiveContainer width="100%" height={280}>
@@ -301,82 +350,6 @@ const HeadcountDashboard: React.FC = () => {
               );
             })()}
 
-            {/* DRIVER SUMMARY TABLE */}
-            <div className="table-card">
-              <div className="px-5 py-4 border-b border-slate-700">
-                <h3 className="text-sm font-semibold text-slate-300">Cost by Driver Category</h3>
-                <p className="text-xs text-slate-500 mt-1">Click a row to expand school detail</p>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left px-5 py-3 text-xs uppercase">Driver</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Schools</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Excess Guides</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Annual Cost</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">% of Total</th>
-                    <th className="text-left px-4 py-3 text-xs uppercase">Nature</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {drivers.map(d => (
-                    <React.Fragment key={d.driver}>
-                      <tr className="cursor-pointer hover:bg-slate-700/50 transition-colors" onClick={() => setExpandedDriver(expandedDriver === d.driver ? null : d.driver)}>
-                        <td className="px-5 py-3 font-medium">
-                          <span className="inline-block w-2 h-2 rounded-full mr-2" style={{ background: d.color }} />
-                          {expandedDriver === d.driver ? '▼' : '▶'} {d.driver}
-                        </td>
-                        <td className="text-right px-4 py-3">{d.schools}</td>
-                        <td className={`text-right px-4 py-3 font-mono ${d.excessGuides > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{varianceText(d.excessGuides)}</td>
-                        <td className="text-right px-4 py-3 font-mono">{fmt(d.annualCost)}</td>
-                        <td className="text-right px-4 py-3">{d.pctOfTotal.toFixed(0)}%</td>
-                        <td className="px-4 py-3 text-xs text-slate-400">{d.nature}</td>
-                      </tr>
-                      {expandedDriver === d.driver && driverSchools(d.driver).map(s => (
-                        <tr key={s.name} className="bg-slate-800/50">
-                          <td className="px-5 py-2 pl-10 text-xs text-slate-300">{s.name}</td>
-                          <td className="text-right px-4 py-2 text-xs">{s.enrolled} students</td>
-                          <td className={`text-right px-4 py-2 text-xs font-mono ${varianceClass(s.variance)}`}>{varianceText(s.variance)}</td>
-                          <td className="text-right px-4 py-2 text-xs font-mono">{s.annualCost !== 0 ? fmt(s.annualCost) : '—'}</td>
-                          <td className="text-right px-4 py-2 text-xs">{s.studentGuideRatio}</td>
-                          <td className="px-4 py-2 text-xs text-slate-500">{s.notes}</td>
-                        </tr>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                  {/* TOTAL ROW */}
-                  <tr className="font-bold border-t border-slate-600">
-                    <td className="px-5 py-3">TOTAL</td>
-                    <td className="text-right px-4 py-3">{drivers.reduce((s, d) => s + d.schools, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono text-red-400">+{drivers.reduce((s, d) => s + Math.max(d.excessGuides, 0), 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono">{fmt(drivers.reduce((s, d) => s + d.annualCost, 0))}</td>
-                    <td className="text-right px-4 py-3">100%</td>
-                    <td className="px-4 py-3"></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* DECISIONS NEEDED */}
-            <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
-              <h3 className="text-sm font-semibold text-amber-400 mb-3">⚡ Decisions Outstanding</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { title: 'Austin Training Hub', cost: '$3.5M/yr', q: 'Formalize as central investment with a cap, or reduce?' },
-                  { title: 'Product Ratios (BTX, NYC, TSA)', cost: '$1.9M/yr', q: 'Update models to match actual ratios, or revert to standard?' },
-                  { title: 'Pre-Launch Staffing Policy', cost: '~$1.1M/yr', q: 'When do schools enroll students or release guides?' },
-                  { title: 'Temporary Variance', cost: '~$1.0M/yr', q: 'Scottsdale, Plano, Nova Austin — have these self-resolved?' },
-                ].map(d => (
-                  <div key={d.title} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-white">{d.title}</span>
-                      <span className="text-xs font-mono text-amber-400">{d.cost}</span>
-                    </div>
-                    <p className="text-xs text-slate-400">{d.q}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </>
         )}
 

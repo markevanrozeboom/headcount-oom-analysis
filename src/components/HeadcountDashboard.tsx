@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { schools, interimAssignments, getDriverSummaries, getPortfolioMetrics, getTuitionTierSummaries, salaryFlags, getSalarySummaryBySchool, type School, type DriverCategory, type ModelStatus, type SchoolType, type TuitionTier } from '../data/headcountData';
+import { schools, interimAssignments, getDriverSummaries, getPortfolioMetrics, getTuitionTierSummaries, salaryFlags, getSalarySummaryBySchool, type School, type SchoolType, type DriverCategory, type ModelStatus } from '../data/headcountData';
 
 // ============================================================================
 // HELPERS
@@ -27,8 +27,7 @@ const statusDot = (s: ModelStatus) => {
 // TYPES
 // ============================================================================
 
-type Tab = 'overview' | 'drivers' | 'schools' | 'tuition' | 'salaries' | 'interim';
-type StatusFilter = 'all' | 'over' | 'at' | 'under';
+type Tab = 'overview' | 'drivers' | 'schools' | 'salaries' | 'interim';
 type SortKey = 'name' | 'enrolled' | 'guidesActual' | 'variance' | 'annualCost';
 
 // ============================================================================
@@ -43,24 +42,12 @@ const KpiCard: React.FC<{ label: string; value: string; sub?: string; accent?: s
   </div>
 );
 
-const Toggle: React.FC<{ options: { id: string; label: string }[]; value: string; onChange: (v: string) => void }> = ({ options, value, onChange }) => (
-  <div className="flex items-center gap-1 bg-slate-700/60 rounded-lg p-1">
-    {options.map(o => (
-      <button key={o.id} onClick={() => onChange(o.id)}
-        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${value === o.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-300 hover:text-white'}`}>
-        {o.label}
-      </button>
-    ))}
-  </div>
-);
-
 // ============================================================================
 // MAIN DASHBOARD
 // ============================================================================
 
 const HeadcountDashboard: React.FC = () => {
   const [tab, setTab] = useState<Tab>('overview');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('variance');
   const [sortAsc, setSortAsc] = useState(false);
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
@@ -71,17 +58,14 @@ const HeadcountDashboard: React.FC = () => {
   const tuitionTiers = useMemo(() => getTuitionTierSummaries(), []);
 
   const filteredSchools = useMemo(() => {
-    let list = [...schools];
-    if (statusFilter === 'over') list = list.filter(s => s.variance > 0);
-    else if (statusFilter === 'at') list = list.filter(s => s.variance === 0);
-    else if (statusFilter === 'under') list = list.filter(s => s.variance < 0);
+    const list = [...schools];
     list.sort((a, b) => {
       const av = a[sortKey] ?? 0, bv = b[sortKey] ?? 0;
       if (typeof av === 'string') return sortAsc ? (av as string).localeCompare(bv as string) : (bv as string).localeCompare(av as string);
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
     return list;
-  }, [statusFilter, sortKey, sortAsc]);
+  }, [sortKey, sortAsc]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc);
@@ -97,23 +81,7 @@ const HeadcountDashboard: React.FC = () => {
     return map;
   }, []);
 
-  const driverSchools = (driver: DriverCategory) => {
-    let list = schools.filter(s => s.driver === driver && s.variance !== 0);
-    if (statusFilter === 'over') list = list.filter(s => s.variance > 0);
-    else if (statusFilter === 'at') list = list.filter(s => s.variance === 0);
-    else if (statusFilter === 'under') list = list.filter(s => s.variance < 0);
-    return list;
-  };
-
-  // Filtered drivers — recompute summaries respecting the status filter
-  const filteredDrivers = useMemo(() => {
-    if (statusFilter === 'all') return drivers;
-    return drivers.map(d => {
-      const ds = driverSchools(d.driver);
-      return { ...d, schools: ds.length, excessGuides: ds.reduce((s, x) => s + x.variance, 0), annualCost: ds.reduce((s, x) => s + x.annualCost, 0) };
-    }).filter(d => d.schools > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drivers, statusFilter]);
+  const driverSchools = (driver: DriverCategory) => schools.filter(s => s.driver === driver && s.variance !== 0);
 
   // ========== TABS ==========
 
@@ -121,7 +89,6 @@ const HeadcountDashboard: React.FC = () => {
     { id: 'overview', label: 'Executive Overview', icon: '📊' },
     { id: 'drivers', label: 'Driver Analysis', icon: '🎯' },
     { id: 'schools', label: 'School Detail', icon: '📋' },
-    { id: 'tuition', label: 'Tuition Tier Analysis', icon: '💰' },
     { id: 'salaries', label: 'Salary vs Model', icon: '⚖️' },
     { id: 'interim', label: 'Interim Assignments', icon: '🔄' },
   ];
@@ -159,16 +126,6 @@ const HeadcountDashboard: React.FC = () => {
               {metrics.totalSchools} schools&nbsp;&nbsp;|&nbsp;&nbsp;{fmtNum(metrics.totalEnrolled)} students&nbsp;&nbsp;|&nbsp;&nbsp;{metrics.totalGuides} guides&nbsp;&nbsp;|&nbsp;&nbsp;Updated Feb 2026
             </p>
           </div>
-          <Toggle
-            options={[
-              { id: 'all', label: 'All Schools' },
-              { id: 'over', label: `Over Model (${metrics.overModelSchools})` },
-              { id: 'at', label: `At Model (${metrics.atModelSchools})` },
-              { id: 'under', label: `Under (${metrics.underModelSchools})` },
-            ]}
-            value={statusFilter}
-            onChange={v => setStatusFilter(v as StatusFilter)}
-          />
         </div>
       </div>
 
@@ -296,7 +253,7 @@ const HeadcountDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDrivers.map(d => (
+                  {drivers.map(d => (
                     <React.Fragment key={d.driver}>
                       <tr className="cursor-pointer hover:bg-slate-700/50 transition-colors" onClick={() => setExpandedDriver(expandedDriver === d.driver ? null : d.driver)}>
                         <td className="px-5 py-3 font-medium">
@@ -324,9 +281,9 @@ const HeadcountDashboard: React.FC = () => {
                   {/* TOTAL ROW */}
                   <tr className="font-bold border-t border-slate-600">
                     <td className="px-5 py-3">TOTAL</td>
-                    <td className="text-right px-4 py-3">{filteredDrivers.reduce((s, d) => s + d.schools, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono text-red-400">+{filteredDrivers.reduce((s, d) => s + Math.max(d.excessGuides, 0), 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono">{fmt(filteredDrivers.reduce((s, d) => s + d.annualCost, 0))}</td>
+                    <td className="text-right px-4 py-3">{drivers.reduce((s, d) => s + d.schools, 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono text-red-400">+{drivers.reduce((s, d) => s + Math.max(d.excessGuides, 0), 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono">{fmt(drivers.reduce((s, d) => s + d.annualCost, 0))}</td>
                     <td className="text-right px-4 py-3">100%</td>
                     <td className="px-4 py-3"></td>
                   </tr>
@@ -362,7 +319,7 @@ const HeadcountDashboard: React.FC = () => {
             ================================================================ */}
         {tab === 'drivers' && (
           <>
-            {filteredDrivers.map(d => (
+            {drivers.map(d => (
               <div key={d.driver} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="px-5 py-4 flex items-center justify-between border-b border-slate-700/50">
                   <div className="flex items-center gap-3">
@@ -490,9 +447,9 @@ const HeadcountDashboard: React.FC = () => {
           );
 
           const sections: { label: string; color: string; badge: string; list: School[] }[] = [
-            ...(statusFilter === 'all' || statusFilter === 'over' ? [{ label: 'Over Model', color: 'text-red-400', badge: 'bg-red-900/40 text-red-300', list: overSchools }] : []),
-            ...(statusFilter === 'all' || statusFilter === 'at' ? [{ label: 'At Model', color: 'text-slate-300', badge: 'bg-slate-700 text-slate-300', list: atSchools }] : []),
-            ...(statusFilter === 'all' || statusFilter === 'under' ? [{ label: 'Under Model', color: 'text-emerald-400', badge: 'bg-emerald-900/40 text-emerald-300', list: underSchools }] : []),
+            { label: 'Over Model', color: 'text-red-400', badge: 'bg-red-900/40 text-red-300', list: overSchools },
+            { label: 'At Model', color: 'text-slate-300', badge: 'bg-slate-700 text-slate-300', list: atSchools },
+            { label: 'Under Model', color: 'text-emerald-400', badge: 'bg-emerald-900/40 text-emerald-300', list: underSchools },
           ];
 
           // Group schools by type within a list
@@ -569,140 +526,6 @@ const HeadcountDashboard: React.FC = () => {
         })()}
 
         {/* ================================================================
-            TUITION TIER TAB
-            ================================================================ */}
-        {tab === 'tuition' && (() => {
-          const tierSchools = (tier: TuitionTier) => schools.filter(s => s.tuitionTier === tier && (s.guidesActual > 0 || s.enrolled > 0));
-
-          return (
-            <>
-              {/* TIER COMPARISON KPIs */}
-              <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
-                <h3 className="text-sm font-semibold text-amber-400 mb-1">Are $40K schools delivering lower guide costs?</h3>
-                <p className="text-xs text-slate-500 mb-4">The $40K microschool model assumes 8:1 ratio and lower salaries to hit target unit economics. This compares actual guide cost as a percentage of tuition revenue across tiers.</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-xs text-slate-500 uppercase">
-                        <th className="text-left px-4 py-2">Tier</th>
-                        <th className="text-right px-3 py-2">Schools</th>
-                        <th className="text-right px-3 py-2">Enrolled</th>
-                        <th className="text-right px-3 py-2">Guides</th>
-                        <th className="text-right px-3 py-2">Ratio</th>
-                        <th className="text-right px-3 py-2">Avg Salary</th>
-                        <th className="text-right px-3 py-2">Guide$/Student</th>
-                        <th className="text-right px-3 py-2 font-semibold text-amber-400">Guide % Rev</th>
-                        <th className="text-right px-3 py-2">Model Cost</th>
-                        <th className="text-right px-3 py-2">Excess Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tuitionTiers.map(t => (
-                        <tr key={t.tier} className="border-t border-slate-700/30 hover:bg-slate-700/30">
-                          <td className="px-4 py-3 font-medium">
-                            <span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{ background: t.color }} />
-                            {t.tier}
-                          </td>
-                          <td className="text-right px-3 py-3">{t.schools}</td>
-                          <td className="text-right px-3 py-3 font-mono">{t.enrolled}</td>
-                          <td className="text-right px-3 py-3 font-mono">{t.guides}</td>
-                          <td className="text-right px-3 py-3">{t.ratio.toFixed(1)}:1</td>
-                          <td className="text-right px-3 py-3 font-mono">{fmt(t.avgSalary)}</td>
-                          <td className="text-right px-3 py-3 font-mono">{t.enrolled > 0 ? fmt(t.guideCostPerStudent) : '—'}</td>
-                          <td className={`text-right px-3 py-3 font-mono font-bold ${t.guidePctRevenue > 80 ? 'text-red-400' : t.guidePctRevenue > 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                            {t.revenue > 0 ? `${t.guidePctRevenue.toFixed(1)}%` : '—'}
-                          </td>
-                          <td className="text-right px-3 py-3 font-mono text-slate-400">{fmt(t.modelCost)}</td>
-                          <td className={`text-right px-3 py-3 font-mono ${t.excessCost > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                            {fmt(t.excessCost)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* VERDICT */}
-              <div className="bg-red-900/20 border border-red-800/40 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-red-400 mb-2">Verdict: $40K schools are NOT delivering lower guide costs</h3>
-                <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                  <li>$40K tier guide cost = <strong className="text-red-400">{tuitionTiers.find(t => t.tier === '$40K')?.guidePctRevenue.toFixed(0)}% of revenue</strong> — nearly identical to $50K+ tier ({tuitionTiers.find(t => t.tier === '$50K+')?.guidePctRevenue.toFixed(0)}%)</li>
-                  <li>At 8:1 model ratio and $155K avg salary, target guide cost should be ~$19K/student (48% of $40K tuition)</li>
-                  <li>Actual: ${tuitionTiers.find(t => t.tier === '$40K')?.guideCostPerStudent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}/student — <strong className="text-red-400">1.6x the target</strong></li>
-                  <li>Austin training hub (+21 guides) accounts for most of the overstaffing; Scottsdale adds +4 temporary</li>
-                  <li>Fort Worth is "at model" but guide cost = 126% of revenue because only 11 students enrolled against 4 guides</li>
-                </ul>
-              </div>
-
-              {/* PER-TIER SCHOOL DETAIL */}
-              {(['$40K', '$50K+', 'Sub-$40K'] as TuitionTier[]).map(tier => {
-                const ts = tierSchools(tier);
-                if (ts.length === 0) return null;
-                const tierInfo = tuitionTiers.find(t => t.tier === tier);
-                return (
-                  <div key={tier} className="table-card">
-                    <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="w-3 h-3 rounded-full" style={{ background: tierInfo?.color }} />
-                        <div>
-                          <span className="text-sm font-semibold text-white">{tier} Tuition Tier</span>
-                          <span className="text-xs text-slate-500 ml-2">{ts.length} schools · Guide cost = {tierInfo?.guidePctRevenue.toFixed(0)}% of revenue</span>
-                        </div>
-                      </div>
-                    </div>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-xs text-slate-500 uppercase">
-                          <th className="text-left px-5 py-2">School</th>
-                          <th className="text-right px-3 py-2">Tuition</th>
-                          <th className="text-right px-3 py-2">Enrolled</th>
-                          <th className="text-right px-3 py-2">Guides</th>
-                          <th className="text-right px-3 py-2">Model</th>
-                          <th className="text-right px-3 py-2">Var</th>
-                          <th className="text-right px-3 py-2">Guide Payroll</th>
-                          <th className="text-right px-3 py-2">Avg/Guide</th>
-                          <th className="text-right px-3 py-2">$/Student</th>
-                          <th className="text-right px-3 py-2 text-amber-400">% Rev</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ts.sort((a, b) => b.totalGuideCost - a.totalGuideCost).map(s => {
-                          const rev = s.enrolled * s.tuition;
-                          const pct = rev > 0 ? (s.totalGuideCost / rev) * 100 : 0;
-                          const perStudent = s.enrolled > 0 ? s.totalGuideCost / s.enrolled : 0;
-                          return (
-                            <tr key={s.name} className="border-t border-slate-700/30 hover:bg-slate-700/30">
-                              <td className="px-5 py-2.5">
-                                <div className="flex items-center gap-2">
-                                  <span className={`w-2 h-2 rounded-full ${statusDot(s.status)}`} />
-                                  <span className="text-slate-200">{s.name}</span>
-                                </div>
-                              </td>
-                              <td className="text-right px-3 py-2.5 font-mono">${(s.tuition / 1000).toFixed(0)}K</td>
-                              <td className="text-right px-3 py-2.5 font-mono">{s.enrolled || '—'}</td>
-                              <td className="text-right px-3 py-2.5 font-mono">{s.guidesActual}</td>
-                              <td className="text-right px-3 py-2.5 font-mono text-slate-500">{s.guidesModel}</td>
-                              <td className={`text-right px-3 py-2.5 font-mono font-semibold ${varianceClass(s.variance)}`}>{s.variance !== 0 ? varianceText(s.variance) : '—'}</td>
-                              <td className="text-right px-3 py-2.5 font-mono">{s.totalGuideCost > 0 ? fmt(s.totalGuideCost) : '—'}</td>
-                              <td className="text-right px-3 py-2.5 font-mono text-slate-400">{s.avgGuideSalary > 0 ? fmt(s.avgGuideSalary) : '—'}</td>
-                              <td className="text-right px-3 py-2.5 font-mono">{perStudent > 0 ? fmt(perStudent) : '—'}</td>
-                              <td className={`text-right px-3 py-2.5 font-mono font-semibold ${pct > 80 ? 'text-red-400' : pct > 50 ? 'text-amber-400' : pct > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                {pct > 0 ? `${pct.toFixed(0)}%` : '—'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              })}
-            </>
-          );
-        })()}
-
-        {/* ================================================================
             SALARY VS MODEL TAB
             ================================================================ */}
         {tab === 'salaries' && (() => {
@@ -720,7 +543,44 @@ const HeadcountDashboard: React.FC = () => {
 
               <div className="bg-slate-800 rounded-xl border border-amber-700/40 p-5">
                 <h3 className="text-sm font-semibold text-amber-400 mb-2">Key Finding: Comp Model Mismatch</h3>
-                <p className="text-xs text-slate-400">Low-cost schools (Brownsville $10K, Nova $15K) are paying Alpha-level guide salaries ($100K) against a $75K model. This is a structural policy mismatch — either the pricing model needs Alpha-level comp, or comp needs to match the low-cost model.</p>
+                <p className="text-xs text-slate-400 mb-4">Low-cost schools (Brownsville $10K, Nova $15K) are paying Alpha-level guide salaries ($100K) against a $75K model. This is a structural policy mismatch — either the pricing model needs Alpha-level comp, or comp needs to match the low-cost model.</p>
+
+                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Guide Cost as % of Tuition Revenue by Tier</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-slate-500 uppercase">
+                        <th className="text-left px-4 py-2">Tier</th>
+                        <th className="text-right px-3 py-2">Schools</th>
+                        <th className="text-right px-3 py-2">Enrolled</th>
+                        <th className="text-right px-3 py-2">Guides</th>
+                        <th className="text-right px-3 py-2">Ratio</th>
+                        <th className="text-right px-3 py-2">Avg Salary</th>
+                        <th className="text-right px-3 py-2">$/Student</th>
+                        <th className="text-right px-3 py-2 text-amber-400 font-semibold">Guide % Rev</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tuitionTiers.map(t => (
+                        <tr key={t.tier} className="border-t border-slate-700/30">
+                          <td className="px-4 py-2.5 font-medium">
+                            <span className="inline-block w-2 h-2 rounded-full mr-2" style={{ background: t.color }} />
+                            {t.tier}
+                          </td>
+                          <td className="text-right px-3 py-2.5">{t.schools}</td>
+                          <td className="text-right px-3 py-2.5 font-mono">{t.enrolled}</td>
+                          <td className="text-right px-3 py-2.5 font-mono">{t.guides}</td>
+                          <td className="text-right px-3 py-2.5">{t.ratio.toFixed(1)}:1</td>
+                          <td className="text-right px-3 py-2.5 font-mono">{fmt(t.avgSalary)}</td>
+                          <td className="text-right px-3 py-2.5 font-mono">{t.enrolled > 0 ? fmt(t.guideCostPerStudent) : '—'}</td>
+                          <td className={`text-right px-3 py-2.5 font-mono font-bold ${t.guidePctRevenue > 80 ? 'text-red-400' : t.guidePctRevenue > 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {t.revenue > 0 ? `${t.guidePctRevenue.toFixed(1)}%` : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               {bySch.map(s => (

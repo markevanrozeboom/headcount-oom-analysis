@@ -417,16 +417,18 @@ const HeadcountDashboard: React.FC = () => {
               <tr>
                 {([
                   ['name', 'School'],
+                  ['', 'Location'],
+                  ['', 'Tuition'],
                   ['enrolled', 'Enrolled'],
                   ['guidesActual', 'Guides'],
                   ['', 'Model'],
                   ['variance', 'Variance'],
-                  ['annualCost', 'Annual Cost'],
+                  ['annualCost', 'OOM Cost'],
                   ['', 'Ratio'],
                   ['', 'Driver'],
                 ] as [string, string][]).map(([key, label]) => (
                   <th key={label}
-                    className={`px-4 py-3 text-xs uppercase ${key ? 'cursor-pointer hover:text-white' : ''} ${label === 'School' ? 'text-left' : 'text-right'}`}
+                    className={`px-3 py-3 text-xs uppercase ${key ? 'cursor-pointer hover:text-white' : ''} ${label === 'School' || label === 'Location' ? 'text-left' : 'text-right'}`}
                     onClick={() => key && handleSort(key as SortKey)}>
                     {label} {sortKey === key ? (sortAsc ? '▲' : '▼') : ''}
                   </th>
@@ -437,50 +439,57 @@ const HeadcountDashboard: React.FC = () => {
 
           const schoolRow = (s: School) => (
             <tr key={s.name} className="border-t border-slate-700/20 hover:bg-slate-700/30">
-              <td className="px-4 py-2.5">
+              <td className="px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${statusDot(s.status)}`} />
-                  <span className="text-slate-200">{s.name}</span>
+                  <div>
+                    <span className="text-slate-200">{s.name}</span>
+                    {s.gradeLevels && <span className="text-xs text-slate-600 ml-1.5">{s.gradeLevels}</span>}
+                  </div>
                 </div>
               </td>
-              <td className="text-right px-4 py-2.5 font-mono">{s.enrolled || '—'}</td>
-              <td className="text-right px-4 py-2.5 font-mono">{s.guidesActual || '—'}</td>
-              <td className="text-right px-4 py-2.5 font-mono text-slate-500">{s.guidesModel || '—'}</td>
-              <td className={`text-right px-4 py-2.5 font-mono font-semibold ${varianceClass(s.variance)}`}>
+              <td className="text-left px-3 py-2.5 text-xs text-slate-500">{s.city}{s.state ? `, ${s.state}` : ''}</td>
+              <td className="text-right px-3 py-2.5 text-xs">
+                {s.tuition > 0 ? <span className="text-slate-300">${(s.tuition/1000).toFixed(0)}K</span> : '—'}
+              </td>
+              <td className="text-right px-3 py-2.5 font-mono">{s.enrolled || '—'}</td>
+              <td className="text-right px-3 py-2.5 font-mono">{s.guidesActual || '—'}</td>
+              <td className="text-right px-3 py-2.5 font-mono text-slate-500">{s.guidesModel || '—'}</td>
+              <td className={`text-right px-3 py-2.5 font-mono font-semibold ${varianceClass(s.variance)}`}>
                 {s.variance !== 0 ? varianceText(s.variance) : '—'}
               </td>
-              <td className="text-right px-4 py-2.5 font-mono">
+              <td className="text-right px-3 py-2.5 font-mono">
                 {s.annualCost !== 0 ? fmt(s.annualCost) : '—'}
               </td>
-              <td className="text-right px-4 py-2.5 text-slate-400">{s.enrolled > 0 ? s.studentGuideRatio : '—'}</td>
-              <td className="text-right px-4 py-2.5 text-xs text-slate-500">{s.driver}</td>
+              <td className="text-right px-3 py-2.5 text-slate-400">{s.enrolled > 0 ? s.studentGuideRatio : '—'}</td>
+              <td className="text-right px-3 py-2.5 text-xs text-slate-500">{s.driver}</td>
             </tr>
           );
 
           const categorySubtotalRow = (label: string, list: School[]) => (
             <tr className="bg-slate-700/30 border-t border-slate-600/30">
-              <td className="px-4 py-2 pl-8 text-slate-400 text-xs font-medium">{label} ({list.length})</td>
-              <td className="text-right px-4 py-2 font-mono text-xs">{list.reduce((s, x) => s + x.enrolled, 0)}</td>
-              <td className="text-right px-4 py-2 font-mono text-xs">{list.reduce((s, x) => s + x.guidesActual, 0)}</td>
-              <td className="text-right px-4 py-2 font-mono text-xs text-slate-500">{list.reduce((s, x) => s + x.guidesModel, 0)}</td>
-              <td className={`text-right px-4 py-2 font-mono text-xs ${varianceClass(list.reduce((s, x) => s + x.variance, 0))}`}>
+              <td className="px-3 py-2 pl-8 text-slate-400 text-xs font-medium" colSpan={3}>{label} ({list.length})</td>
+              <td className="text-right px-3 py-2 font-mono text-xs">{list.reduce((s, x) => s + x.enrolled, 0)}</td>
+              <td className="text-right px-3 py-2 font-mono text-xs">{list.reduce((s, x) => s + x.guidesActual, 0)}</td>
+              <td className="text-right px-3 py-2 font-mono text-xs text-slate-500">{list.reduce((s, x) => s + x.guidesModel, 0)}</td>
+              <td className={`text-right px-3 py-2 font-mono text-xs ${varianceClass(list.reduce((s, x) => s + x.variance, 0))}`}>
                 {varianceText(list.reduce((s, x) => s + x.variance, 0))}
               </td>
-              <td className="text-right px-4 py-2 font-mono text-xs">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
+              <td className="text-right px-3 py-2 font-mono text-xs">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
               <td colSpan={2}></td>
             </tr>
           );
 
           const subtotalRow = (label: string, list: School[]) => (
             <tr className="font-bold border-t border-slate-600/50">
-              <td className="px-4 py-2.5 text-slate-300">{label} ({list.length})</td>
-              <td className="text-right px-4 py-2.5 font-mono">{list.reduce((s, x) => s + x.enrolled, 0)}</td>
-              <td className="text-right px-4 py-2.5 font-mono">{list.reduce((s, x) => s + x.guidesActual, 0)}</td>
-              <td className="text-right px-4 py-2.5 font-mono text-slate-500">{list.reduce((s, x) => s + x.guidesModel, 0)}</td>
-              <td className={`text-right px-4 py-2.5 font-mono ${varianceClass(list.reduce((s, x) => s + x.variance, 0))}`}>
+              <td className="px-3 py-2.5 text-slate-300" colSpan={3}>{label} ({list.length})</td>
+              <td className="text-right px-3 py-2.5 font-mono">{list.reduce((s, x) => s + x.enrolled, 0)}</td>
+              <td className="text-right px-3 py-2.5 font-mono">{list.reduce((s, x) => s + x.guidesActual, 0)}</td>
+              <td className="text-right px-3 py-2.5 font-mono text-slate-500">{list.reduce((s, x) => s + x.guidesModel, 0)}</td>
+              <td className={`text-right px-3 py-2.5 font-mono ${varianceClass(list.reduce((s, x) => s + x.variance, 0))}`}>
                 {varianceText(list.reduce((s, x) => s + x.variance, 0))}
               </td>
-              <td className="text-right px-4 py-2.5 font-mono">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
+              <td className="text-right px-3 py-2.5 font-mono">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
               <td colSpan={2}></td>
             </tr>
           );

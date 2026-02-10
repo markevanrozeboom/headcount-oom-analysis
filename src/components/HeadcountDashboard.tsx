@@ -96,7 +96,23 @@ const HeadcountDashboard: React.FC = () => {
     return map;
   }, []);
 
-  const driverSchools = (driver: DriverCategory) => schools.filter(s => s.driver === driver && s.variance !== 0);
+  const driverSchools = (driver: DriverCategory) => {
+    let list = schools.filter(s => s.driver === driver && s.variance !== 0);
+    if (statusFilter === 'over') list = list.filter(s => s.variance > 0);
+    else if (statusFilter === 'at') list = list.filter(s => s.variance === 0);
+    else if (statusFilter === 'under') list = list.filter(s => s.variance < 0);
+    return list;
+  };
+
+  // Filtered drivers — recompute summaries respecting the status filter
+  const filteredDrivers = useMemo(() => {
+    if (statusFilter === 'all') return drivers;
+    return drivers.map(d => {
+      const ds = driverSchools(d.driver);
+      return { ...d, schools: ds.length, excessGuides: ds.reduce((s, x) => s + x.variance, 0), annualCost: ds.reduce((s, x) => s + x.annualCost, 0) };
+    }).filter(d => d.schools > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drivers, statusFilter]);
 
   // ========== TABS ==========
 
@@ -111,12 +127,23 @@ const HeadcountDashboard: React.FC = () => {
   const pieData = drivers.map(d => ({ name: d.driver, value: Math.max(d.annualCost, 0) }));
   const PIE_COLORS = drivers.map(d => d.color);
 
-  // BAR DATA for top over-model schools
+  // BAR DATA for top over-model schools — show full dollar values
   const barData = schools
     .filter(s => s.variance > 0)
     .sort((a, b) => b.annualCost - a.annualCost)
     .slice(0, 8)
-    .map(s => ({ name: s.name.replace(/^Alpha (School: )?/, '').replace(' Academy', ''), cost: s.annualCost / 1000, excess: s.variance }));
+    .map(s => ({ name: s.name.replace(/^Alpha (School: )?/, '').replace(' Academy', ''), cost: s.annualCost, excess: s.variance }));
+
+  // PER-STUDENT-AT-CAPACITY table data — only schools with capacity > 0 and over model
+  const perCapData = schools
+    .filter(s => s.variance > 0 && s.capacity > 0)
+    .map(s => ({ ...s, costPerCapStudent: s.annualCost / s.capacity }))
+    .sort((a, b) => b.costPerCapStudent - a.costPerCapStudent);
+
+  // Schools grouped by status for the School Detail tab
+  const overSchools = useMemo(() => filteredSchools.filter(s => s.variance > 0), [filteredSchools]);
+  const atSchools = useMemo(() => filteredSchools.filter(s => s.variance === 0), [filteredSchools]);
+  const underSchools = useMemo(() => filteredSchools.filter(s => s.variance < 0), [filteredSchools]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
@@ -190,18 +217,62 @@ const HeadcountDashboard: React.FC = () => {
 
               {/* BAR: Top excess schools */}
               <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-                <h3 className="text-sm font-semibold text-slate-300 mb-4">Top Schools by OOM Cost ($K)</h3>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={barData} layout="vertical" margin={{ left: 80, right: 20 }}>
+                <h3 className="text-sm font-semibold text-slate-300 mb-4">Top Schools by Annual OOM Cost</h3>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={barData} layout="vertical" margin={{ left: 100, right: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: '#cbd5e1', fontSize: 11 }} width={80} />
+                    <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 11 }}
+                      tickFormatter={(v: number) => fmt(v)} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: '#cbd5e1', fontSize: 11 }} width={100} />
                     <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0' }}
-                      formatter={(v: number) => [`$${v.toFixed(0)}K`, 'Annual Cost']} />
-                    <Bar dataKey="cost" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                      formatter={(v: number) => [fmt(v), 'Annual Cost']} />
+                    <Bar dataKey="cost" fill="#f59e0b" radius={[0, 4, 4, 0]}
+                      label={{ position: 'right', fill: '#cbd5e1', fontSize: 11, formatter: (v: number) => fmt(v) }} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+
+            {/* PER STUDENT AT CAPACITY TABLE */}
+            <div className="table-card">
+              <div className="px-5 py-4 border-b border-slate-700">
+                <h3 className="text-sm font-semibold text-slate-300">OOM Cost per Student at Capacity</h3>
+                <p className="text-xs text-slate-500 mt-1">What each excess guide costs spread across capacity seats — shows the burden on unit economics</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left px-5 py-3 text-xs uppercase">School</th>
+                    <th className="text-right px-4 py-3 text-xs uppercase">Capacity</th>
+                    <th className="text-right px-4 py-3 text-xs uppercase">Enrolled</th>
+                    <th className="text-right px-4 py-3 text-xs uppercase">Excess</th>
+                    <th className="text-right px-4 py-3 text-xs uppercase">Annual OOM</th>
+                    <th className="text-right px-4 py-3 text-xs uppercase">OOM / Cap Student</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perCapData.map(s => (
+                    <tr key={s.name} className="border-t border-slate-700/20 hover:bg-slate-700/30">
+                      <td className="px-5 py-2.5 text-slate-200">{s.name}</td>
+                      <td className="text-right px-4 py-2.5 font-mono">{s.capacity}</td>
+                      <td className="text-right px-4 py-2.5 font-mono">{s.enrolled}</td>
+                      <td className="text-right px-4 py-2.5 font-mono text-red-400">+{s.variance}</td>
+                      <td className="text-right px-4 py-2.5 font-mono">{fmt(s.annualCost)}</td>
+                      <td className="text-right px-4 py-2.5 font-mono font-semibold text-amber-400">{fmt(s.costPerCapStudent)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-bold border-t border-slate-600">
+                    <td className="px-5 py-3">TOTAL</td>
+                    <td className="text-right px-4 py-3 font-mono">{perCapData.reduce((s, x) => s + x.capacity, 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono">{perCapData.reduce((s, x) => s + x.enrolled, 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono text-red-400">+{perCapData.reduce((s, x) => s + x.variance, 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono">{fmt(perCapData.reduce((s, x) => s + x.annualCost, 0))}</td>
+                    <td className="text-right px-4 py-3 font-mono text-amber-400">
+                      {fmt(perCapData.reduce((s, x) => s + x.annualCost, 0) / Math.max(perCapData.reduce((s, x) => s + x.capacity, 0), 1))}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* DRIVER SUMMARY TABLE */}
@@ -222,7 +293,7 @@ const HeadcountDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {drivers.map(d => (
+                  {filteredDrivers.map(d => (
                     <React.Fragment key={d.driver}>
                       <tr className="cursor-pointer hover:bg-slate-700/50 transition-colors" onClick={() => setExpandedDriver(expandedDriver === d.driver ? null : d.driver)}>
                         <td className="px-5 py-3 font-medium">
@@ -250,9 +321,9 @@ const HeadcountDashboard: React.FC = () => {
                   {/* TOTAL ROW */}
                   <tr className="font-bold border-t border-slate-600">
                     <td className="px-5 py-3">TOTAL</td>
-                    <td className="text-right px-4 py-3">{drivers.reduce((s, d) => s + d.schools, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono text-red-400">+{drivers.reduce((s, d) => s + Math.max(d.excessGuides, 0), 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono">{fmt(drivers.reduce((s, d) => s + d.annualCost, 0))}</td>
+                    <td className="text-right px-4 py-3">{filteredDrivers.reduce((s, d) => s + d.schools, 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono text-red-400">+{filteredDrivers.reduce((s, d) => s + Math.max(d.excessGuides, 0), 0)}</td>
+                    <td className="text-right px-4 py-3 font-mono">{fmt(filteredDrivers.reduce((s, d) => s + d.annualCost, 0))}</td>
                     <td className="text-right px-4 py-3">100%</td>
                     <td className="px-4 py-3"></td>
                   </tr>
@@ -288,7 +359,7 @@ const HeadcountDashboard: React.FC = () => {
             ================================================================ */}
         {tab === 'drivers' && (
           <>
-            {drivers.map(d => (
+            {filteredDrivers.map(d => (
               <div key={d.driver} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="px-5 py-4 flex items-center justify-between border-b border-slate-700/50">
                   <div className="flex items-center gap-3">
@@ -313,7 +384,7 @@ const HeadcountDashboard: React.FC = () => {
                       <th className="text-right px-3 py-2">Variance</th>
                       <th className="text-right px-3 py-2">Ratio</th>
                       <th className="text-right px-3 py-2">Cost</th>
-                      <th className="text-left px-3 py-2">Notes</th>
+                      <th className="text-left px-3 py-2">Stef Notes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -337,81 +408,115 @@ const HeadcountDashboard: React.FC = () => {
         )}
 
         {/* ================================================================
-            SCHOOLS TAB
+            SCHOOLS TAB — grouped by Over / At / Under model
             ================================================================ */}
-        {tab === 'schools' && (
-          <div className="table-card">
-            <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-300">All Schools ({filteredSchools.length})</h3>
-                <p className="text-xs text-slate-500 mt-1">Click column headers to sort</p>
+        {tab === 'schools' && (() => {
+          const schoolTableHead = (
+            <thead>
+              <tr>
+                {([
+                  ['name', 'School'],
+                  ['enrolled', 'Enrolled'],
+                  ['guidesActual', 'Guides'],
+                  ['', 'Model'],
+                  ['variance', 'Variance'],
+                  ['annualCost', 'Annual Cost'],
+                  ['', 'Ratio'],
+                  ['', 'Type'],
+                  ['', 'Driver'],
+                ] as [string, string][]).map(([key, label]) => (
+                  <th key={label}
+                    className={`px-4 py-3 text-xs uppercase ${key ? 'cursor-pointer hover:text-white' : ''} ${label === 'School' ? 'text-left' : 'text-right'}`}
+                    onClick={() => key && handleSort(key as SortKey)}>
+                    {label} {sortKey === key ? (sortAsc ? '▲' : '▼') : ''}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          );
+
+          const schoolRow = (s: School) => (
+            <tr key={s.name} className="border-t border-slate-700/20 hover:bg-slate-700/30">
+              <td className="px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${statusDot(s.status)}`} />
+                  <span className="text-slate-200">{s.name}</span>
+                </div>
+              </td>
+              <td className="text-right px-4 py-2.5 font-mono">{s.enrolled || '—'}</td>
+              <td className="text-right px-4 py-2.5 font-mono">{s.guidesActual || '—'}</td>
+              <td className="text-right px-4 py-2.5 font-mono text-slate-500">{s.guidesModel || '—'}</td>
+              <td className={`text-right px-4 py-2.5 font-mono font-semibold ${varianceClass(s.variance)}`}>
+                {s.variance !== 0 ? varianceText(s.variance) : '—'}
+              </td>
+              <td className="text-right px-4 py-2.5 font-mono">
+                {s.annualCost !== 0 ? fmt(s.annualCost) : '—'}
+              </td>
+              <td className="text-right px-4 py-2.5 text-slate-400">{s.enrolled > 0 ? s.studentGuideRatio : '—'}</td>
+              <td className="text-right px-4 py-2.5">
+                <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">{s.schoolType}</span>
+              </td>
+              <td className="text-right px-4 py-2.5 text-xs text-slate-500">{s.driver}</td>
+            </tr>
+          );
+
+          const subtotalRow = (label: string, list: School[]) => (
+            <tr className="font-bold border-t border-slate-600/50">
+              <td className="px-4 py-2.5 text-slate-300">{label} ({list.length})</td>
+              <td className="text-right px-4 py-2.5 font-mono">{list.reduce((s, x) => s + x.enrolled, 0)}</td>
+              <td className="text-right px-4 py-2.5 font-mono">{list.reduce((s, x) => s + x.guidesActual, 0)}</td>
+              <td className="text-right px-4 py-2.5 font-mono text-slate-500">{list.reduce((s, x) => s + x.guidesModel, 0)}</td>
+              <td className={`text-right px-4 py-2.5 font-mono ${varianceClass(list.reduce((s, x) => s + x.variance, 0))}`}>
+                {varianceText(list.reduce((s, x) => s + x.variance, 0))}
+              </td>
+              <td className="text-right px-4 py-2.5 font-mono">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
+              <td colSpan={3}></td>
+            </tr>
+          );
+
+          const sections: { label: string; color: string; badge: string; list: School[] }[] = [
+            ...(statusFilter === 'all' || statusFilter === 'over' ? [{ label: 'Over Model', color: 'text-red-400', badge: 'bg-red-900/40 text-red-300', list: overSchools }] : []),
+            ...(statusFilter === 'all' || statusFilter === 'at' ? [{ label: 'At Model', color: 'text-slate-300', badge: 'bg-slate-700 text-slate-300', list: atSchools }] : []),
+            ...(statusFilter === 'all' || statusFilter === 'under' ? [{ label: 'Under Model', color: 'text-emerald-400', badge: 'bg-emerald-900/40 text-emerald-300', list: underSchools }] : []),
+          ];
+
+          return (
+            <div className="space-y-6">
+              {sections.map(sec => sec.list.length > 0 && (
+                <div key={sec.label} className="table-card">
+                  <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-semibold ${sec.color}`}>{sec.label}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${sec.badge}`}>{sec.list.length} schools</span>
+                    </div>
+                    <span className="text-xs text-slate-500">Click column headers to sort</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm whitespace-nowrap">
+                      {schoolTableHead}
+                      <tbody>
+                        {sec.list.map(schoolRow)}
+                        {subtotalRow(sec.label, sec.list)}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+
+              {/* PORTFOLIO TOTAL */}
+              <div className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
+                  <div><div className="text-xs text-slate-500 uppercase">Schools</div><div className="text-lg font-bold">{filteredSchools.length}</div></div>
+                  <div><div className="text-xs text-slate-500 uppercase">Enrolled</div><div className="text-lg font-bold">{filteredSchools.reduce((s, x) => s + x.enrolled, 0)}</div></div>
+                  <div><div className="text-xs text-slate-500 uppercase">Guides</div><div className="text-lg font-bold">{filteredSchools.reduce((s, x) => s + x.guidesActual, 0)}</div></div>
+                  <div><div className="text-xs text-slate-500 uppercase">Model</div><div className="text-lg font-bold text-slate-400">{filteredSchools.reduce((s, x) => s + x.guidesModel, 0)}</div></div>
+                  <div><div className="text-xs text-slate-500 uppercase">Net Variance</div><div className={`text-lg font-bold ${varianceClass(filteredSchools.reduce((s, x) => s + x.variance, 0))}`}>{varianceText(filteredSchools.reduce((s, x) => s + x.variance, 0))}</div></div>
+                  <div><div className="text-xs text-slate-500 uppercase">OOM Cost</div><div className="text-lg font-bold text-amber-400">{fmt(filteredSchools.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</div></div>
+                </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm whitespace-nowrap">
-                <thead>
-                  <tr>
-                    {([
-                      ['name', 'School'],
-                      ['enrolled', 'Enrolled'],
-                      ['guidesActual', 'Guides'],
-                      ['', 'Model'],
-                      ['variance', 'Variance'],
-                      ['annualCost', 'Annual Cost'],
-                      ['', 'Ratio'],
-                      ['', 'Type'],
-                      ['', 'Driver'],
-                    ] as [string, string][]).map(([key, label]) => (
-                      <th key={label}
-                        className={`px-4 py-3 text-xs uppercase ${key ? 'cursor-pointer hover:text-white' : ''} ${label === 'School' ? 'text-left' : 'text-right'}`}
-                        onClick={() => key && handleSort(key as SortKey)}>
-                        {label} {sortKey === key ? (sortAsc ? '▲' : '▼') : ''}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSchools.map(s => (
-                    <tr key={s.name} className="border-t border-slate-700/20 hover:bg-slate-700/30">
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${statusDot(s.status)}`} />
-                          <span className="text-slate-200">{s.name}</span>
-                        </div>
-                      </td>
-                      <td className="text-right px-4 py-2.5 font-mono">{s.enrolled || '—'}</td>
-                      <td className="text-right px-4 py-2.5 font-mono">{s.guidesActual || '—'}</td>
-                      <td className="text-right px-4 py-2.5 font-mono text-slate-500">{s.guidesModel || '—'}</td>
-                      <td className={`text-right px-4 py-2.5 font-mono font-semibold ${varianceClass(s.variance)}`}>
-                        {s.variance !== 0 ? varianceText(s.variance) : '—'}
-                      </td>
-                      <td className="text-right px-4 py-2.5 font-mono">
-                        {s.annualCost !== 0 ? fmt(s.annualCost) : '—'}
-                      </td>
-                      <td className="text-right px-4 py-2.5 text-slate-400">{s.enrolled > 0 ? s.studentGuideRatio : '—'}</td>
-                      <td className="text-right px-4 py-2.5">
-                        <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">{s.schoolType}</span>
-                      </td>
-                      <td className="text-right px-4 py-2.5 text-xs text-slate-500">{s.driver}</td>
-                    </tr>
-                  ))}
-                  {/* TOTAL */}
-                  <tr className="font-bold border-t-2 border-slate-600">
-                    <td className="px-4 py-3">PORTFOLIO ({filteredSchools.length})</td>
-                    <td className="text-right px-4 py-3 font-mono">{filteredSchools.reduce((s, x) => s + x.enrolled, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono">{filteredSchools.reduce((s, x) => s + x.guidesActual, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono text-slate-500">{filteredSchools.reduce((s, x) => s + x.guidesModel, 0)}</td>
-                    <td className={`text-right px-4 py-3 font-mono ${varianceClass(filteredSchools.reduce((s, x) => s + x.variance, 0))}`}>
-                      {varianceText(filteredSchools.reduce((s, x) => s + x.variance, 0))}
-                    </td>
-                    <td className="text-right px-4 py-3 font-mono">{fmt(filteredSchools.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
-                    <td colSpan={3}></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ================================================================
             INTERIM TAB

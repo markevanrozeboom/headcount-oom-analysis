@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { schools, interimAssignments, getDriverSummaries, getPortfolioMetrics, getTuitionTierSummaries, type School, type DriverCategory, type ModelStatus, type SchoolType, type TuitionTier } from '../data/headcountData';
+import { schools, interimAssignments, getDriverSummaries, getPortfolioMetrics, getTuitionTierSummaries, salaryFlags, getSalarySummaryBySchool, type School, type DriverCategory, type ModelStatus, type SchoolType, type TuitionTier } from '../data/headcountData';
 
 // ============================================================================
 // HELPERS
@@ -27,7 +27,7 @@ const statusDot = (s: ModelStatus) => {
 // TYPES
 // ============================================================================
 
-type Tab = 'overview' | 'drivers' | 'schools' | 'tuition' | 'interim';
+type Tab = 'overview' | 'drivers' | 'schools' | 'tuition' | 'salaries' | 'interim';
 type StatusFilter = 'all' | 'over' | 'at' | 'under';
 type SortKey = 'name' | 'enrolled' | 'guidesActual' | 'variance' | 'annualCost';
 
@@ -122,6 +122,7 @@ const HeadcountDashboard: React.FC = () => {
     { id: 'drivers', label: 'Driver Analysis', icon: '🎯' },
     { id: 'schools', label: 'School Detail', icon: '📋' },
     { id: 'tuition', label: 'Tuition Tier Analysis', icon: '💰' },
+    { id: 'salaries', label: 'Salary vs Model', icon: '⚖️' },
     { id: 'interim', label: 'Interim Assignments', icon: '🔄' },
   ];
 
@@ -697,6 +698,67 @@ const HeadcountDashboard: React.FC = () => {
                   </div>
                 );
               })}
+            </>
+          );
+        })()}
+
+        {/* ================================================================
+            SALARY VS MODEL TAB
+            ================================================================ */}
+        {tab === 'salaries' && (() => {
+          const bySch = getSalarySummaryBySchool();
+          const totalDelta = salaryFlags.reduce((s, f) => s + f.delta, 0);
+          const totalOver = salaryFlags.length;
+          return (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <KpiCard label="Staff Over Salary Model" value={`${totalOver}`} sub="Individual salary flags" accent="text-red-400" />
+                <KpiCard label="Total Salary Overage" value={fmt(totalDelta)} sub="vs approved model comp" accent="text-amber-400" />
+                <KpiCard label="Schools Affected" value={`${bySch.length}`} sub={`of ${schools.filter(s => s.guidesActual > 0).length} with staff`} />
+                <KpiCard label="Avg Overage" value={fmt(totalDelta / Math.max(totalOver, 1))} sub="Per flagged person" />
+              </div>
+
+              <div className="bg-slate-800 rounded-xl border border-amber-700/40 p-5">
+                <h3 className="text-sm font-semibold text-amber-400 mb-2">Key Finding: Comp Model Mismatch</h3>
+                <p className="text-xs text-slate-400">Low-cost schools (Brownsville $10K, Nova $15K) are paying Alpha-level guide salaries ($100K) against a $75K model. This is a structural policy mismatch — either the pricing model needs Alpha-level comp, or comp needs to match the low-cost model.</p>
+              </div>
+
+              {bySch.map(s => (
+                <div key={s.school} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                  <div className="px-5 py-4 flex items-center justify-between border-b border-slate-700/50">
+                    <div>
+                      <h3 className="text-base font-semibold text-white">{s.school}</h3>
+                      <p className="text-xs text-slate-400">Pricing model: {s.model}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-red-400 font-mono">{fmt(s.totalDelta)}</div>
+                      <div className="text-xs text-slate-500">{s.count} staff over model</div>
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-slate-500 uppercase">
+                        <th className="text-left px-5 py-2">Name</th>
+                        <th className="text-left px-3 py-2">Role</th>
+                        <th className="text-right px-3 py-2">Actual Salary</th>
+                        <th className="text-right px-3 py-2">Model Salary</th>
+                        <th className="text-right px-3 py-2">Delta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {s.flags.sort((a, b) => b.delta - a.delta).map(f => (
+                        <tr key={f.name} className="border-t border-slate-700/30 hover:bg-slate-700/30">
+                          <td className="px-5 py-2.5 text-slate-200">{f.name}</td>
+                          <td className="px-3 py-2.5 text-slate-400">{f.role}</td>
+                          <td className="text-right px-3 py-2.5 font-mono">{fmt(f.actual)}</td>
+                          <td className="text-right px-3 py-2.5 font-mono text-slate-500">{fmt(f.benchmark)}</td>
+                          <td className="text-right px-3 py-2.5 font-mono text-red-400 font-semibold">+{fmt(f.delta)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
             </>
           );
         })()}

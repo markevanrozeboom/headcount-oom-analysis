@@ -349,6 +349,82 @@ export function getTuitionTierSummaries(): TuitionTierSummary[] {
 }
 
 // ============================================================================
+// SALARY VS MODEL ANALYSIS
+// ============================================================================
+
+export interface SalaryFlag {
+  school: string;
+  pricingModel: string;
+  name: string;
+  role: string;
+  actual: number;
+  benchmark: number;
+  delta: number;
+  flag: 'over' | 'under' | 'ok' | 'no-benchmark';
+}
+
+export const salaryFlags: SalaryFlag[] = [
+  // HS Austin
+  { school: 'Alpha High School: Austin', pricingModel: '$40K Alpha', name: 'Chris Locke', role: 'Head of School', actual: 399984, benchmark: 200000, delta: 199984, flag: 'over' },
+  { school: 'Alpha High School: Austin', pricingModel: '$40K Alpha', name: 'Cameron Sorsby', role: 'Guide', actual: 199992, benchmark: 100000, delta: 99992, flag: 'over' },
+  { school: 'Alpha High School: Austin', pricingModel: '$40K Alpha', name: 'Garrett Livingston Rigby', role: 'Guide - other', actual: 150000, benchmark: 100000, delta: 50000, flag: 'over' },
+  // Austin Spyglass
+  { school: 'Alpha School: Austin Spyglass', pricingModel: '$40K Alpha', name: 'Shannon Peifer', role: 'Campus Coordinator', actual: 150000, benchmark: 60000, delta: 90000, flag: 'over' },
+  { school: 'Alpha School: Austin Spyglass', pricingModel: '$40K Alpha', name: 'Julie Parrish', role: 'Guide', actual: 150000, benchmark: 100000, delta: 50000, flag: 'over' },
+  { school: 'Alpha School: Austin Spyglass', pricingModel: '$40K Alpha', name: 'Alex Cruz', role: 'Guide', actual: 135000, benchmark: 100000, delta: 35000, flag: 'over' },
+  { school: 'Alpha School: Austin Spyglass', pricingModel: '$40K Alpha', name: 'Spencer Opatrny', role: 'Guide Asst.', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Alpha School: Austin Spyglass', pricingModel: '$40K Alpha', name: 'Mia Schaubhut', role: 'Guide Asst.', actual: 81000, benchmark: 75000, delta: 6000, flag: 'over' },
+  // Brownsville — systemic: Alpha comp at Low-Dollar pricing
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Giana Hesterberg', role: 'Guide', actual: 104000, benchmark: 75000, delta: 29000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Kathrine Ledesma', role: 'Campus Coord', actual: 100000, benchmark: 60000, delta: 40000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Desire Park', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Samantha Hilton', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Tyisha Brooks', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Zijin Zhang', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Patricia Ana Kelley', role: 'Guide Asst.', actual: 60000, benchmark: 40000, delta: 20000, flag: 'over' },
+  { school: 'Alpha School: Brownsville', pricingModel: '$15K Low Dollar', name: 'Neftali Tavares', role: 'Guide Asst.', actual: 52000, benchmark: 40000, delta: 12000, flag: 'over' },
+  // Nova Austin — same pattern
+  { school: 'Nova Austin', pricingModel: '$15K Low Dollar', name: 'Gwen Hurst', role: 'Guide Asst.', actual: 104000, benchmark: 40000, delta: 64000, flag: 'over' },
+  { school: 'Nova Austin', pricingModel: '$15K Low Dollar', name: 'Christopher Todd White', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Nova Austin', pricingModel: '$15K Low Dollar', name: 'Cole Ransdell', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Nova Austin', pricingModel: '$15K Low Dollar', name: 'Mackenzie Hannah Shiau', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Nova Austin', pricingModel: '$15K Low Dollar', name: 'Robert Jesus Eakin', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  // Charlotte
+  { school: 'Alpha Charlotte', pricingModel: '$40K Microschool', name: 'Timothy Andrew Berry', role: 'Lead Guide', actual: 200000, benchmark: 150000, delta: 50000, flag: 'over' },
+  { school: 'Alpha Charlotte', pricingModel: '$40K Microschool', name: 'Jenna Christine Klemm', role: 'Guide', actual: 120000, benchmark: 100000, delta: 20000, flag: 'over' },
+  { school: 'Alpha Charlotte', pricingModel: '$40K Microschool', name: 'Timothy Patrick Sheehy', role: 'Guide', actual: 120000, benchmark: 100000, delta: 20000, flag: 'over' },
+  { school: 'Alpha Charlotte', pricingModel: '$40K Microschool', name: 'Jenna Elizabeth York', role: 'Campus Coord', actual: 75000, benchmark: 60000, delta: 15000, flag: 'over' },
+  // Raleigh
+  { school: 'Alpha Raleigh', pricingModel: '$40K Microschool', name: 'Courtney Elisabeth Fenner', role: 'Lead Guide', actual: 200000, benchmark: 150000, delta: 50000, flag: 'over' },
+  { school: 'Alpha Raleigh', pricingModel: '$40K Microschool', name: 'Tamara Yvonne Stephenson', role: 'Guide', actual: 120000, benchmark: 100000, delta: 20000, flag: 'over' },
+  { school: 'Alpha Raleigh', pricingModel: '$40K Microschool', name: 'Jennifer Renee Greenham', role: 'Guide', actual: 120000, benchmark: 100000, delta: 20000, flag: 'over' },
+  // Scottsdale
+  { school: 'Alpha Scottsdale', pricingModel: '$40K Microschool', name: 'Morgan Routh', role: 'Guide', actual: 135000, benchmark: 100000, delta: 35000, flag: 'over' },
+  { school: 'Alpha Scottsdale', pricingModel: '$40K Microschool', name: 'Patricio Hernandez', role: 'Guide', actual: 135000, benchmark: 100000, delta: 35000, flag: 'over' },
+  // Nova Bastrop
+  { school: 'Nova Bastrop', pricingModel: '$15K Low Dollar', name: 'Ashley Storms', role: 'Lead Guide', actual: 155720, benchmark: 150000, delta: 5720, flag: 'over' },
+  { school: 'Nova Bastrop', pricingModel: '$15K Low Dollar', name: 'Stephanie Gasch', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  { school: 'Nova Bastrop', pricingModel: '$15K Low Dollar', name: 'Jessica Allyson Criss', role: 'Guide', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  // Miami
+  { school: 'Alpha School: Miami', pricingModel: '$50K Alpha', name: 'Maria Elena Mejia', role: 'Campus Coord', actual: 100000, benchmark: 75000, delta: 25000, flag: 'over' },
+  // Houston
+  { school: 'Alpha Houston', pricingModel: '$40K Microschool', name: 'Milli J Patel', role: 'Guide', actual: 120000, benchmark: 100000, delta: 20000, flag: 'over' },
+  // NextGen
+  { school: 'NextGen', pricingModel: '$25K GT', name: 'Christopher Sean Ahrens', role: 'Campus Coord', actual: 100000, benchmark: 60000, delta: 40000, flag: 'over' },
+];
+
+export function getSalarySummaryBySchool() {
+  const map: Record<string, { school: string; model: string; count: number; totalDelta: number; flags: SalaryFlag[] }> = {};
+  for (const f of salaryFlags) {
+    if (!map[f.school]) map[f.school] = { school: f.school, model: f.pricingModel, count: 0, totalDelta: 0, flags: [] };
+    map[f.school].count++;
+    map[f.school].totalDelta += f.delta;
+    map[f.school].flags.push(f);
+  }
+  return Object.values(map).sort((a, b) => b.totalDelta - a.totalDelta);
+}
+
+// ============================================================================
 // PORTFOLIO METRICS
 // ============================================================================
 

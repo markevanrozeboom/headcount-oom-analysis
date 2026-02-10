@@ -29,6 +29,8 @@ export type SchoolType = 'Alpha' | 'Alpha Microschool' | 'Non-Alpha' | 'Montesso
 
 export type ModelStatus = 'over' | 'at' | 'under';
 
+export type TuitionTier = '$40K' | '$50K+' | 'Sub-$40K';
+
 export interface School {
   name: string;
   enrolled: number;
@@ -38,6 +40,9 @@ export interface School {
   variance: number;
   annualCost: number; // estimated annual cost of excess (negative = savings)
   avgGuideSalary: number;
+  totalGuideCost: number; // total annual guide payroll
+  tuition: number;
+  tuitionTier: TuitionTier;
   studentGuideRatio: string;
   modelRatio: string;
   schoolType: SchoolType;
@@ -59,273 +64,142 @@ export interface InterimAssignment {
 // ============================================================================
 
 export const schools: School[] = [
-  {
-    name: 'Alpha School: Austin Spyglass',
-    enrolled: 161, capacity: 212, guidesActual: 32, guidesModel: 15, variance: 17,
-    annualCost: 2858000, avgGuideSalary: 168117,
-    studentGuideRatio: '5:1', modelRatio: '11:1',
-    schoolType: 'Alpha', driver: 'Training Hub', status: 'over',
-    notes: 'Always overstaffed — training grounds for guides deployed network-wide',
-  },
-  {
-    name: 'Alpha School: Miami',
-    enrolled: 67, capacity: 184, guidesActual: 10, guidesModel: 6, variance: 4,
-    annualCost: 939000, avgGuideSalary: 234738,
-    studentGuideRatio: '7:1', modelRatio: '11:1',
-    schoolType: 'Alpha', driver: 'Timing', status: 'over',
-    notes: 'Hired proactively as enrollment approached trigger thresholds across 5 levels',
-  },
-  {
-    name: 'Alpha High School: Austin',
-    enrolled: 50, capacity: 206, guidesActual: 8, guidesModel: 4, variance: 4,
-    annualCost: 678000, avgGuideSalary: 169425,
-    studentGuideRatio: '6:1', modelRatio: '11:1',
-    schoolType: 'Alpha', driver: 'Training Hub', status: 'over',
-    notes: 'Austin training hub — guides trained here before deployment',
-  },
-  {
-    name: 'Alpha School: Brownsville',
-    enrolled: 40, capacity: 55, guidesActual: 9, guidesModel: 4, variance: 5,
-    annualCost: 897000, avgGuideSalary: 179358,
-    studentGuideRatio: '4:1', modelRatio: '25:1',
-    schoolType: 'Alpha', driver: 'Non-Standard Ratio', status: 'over',
-    notes: 'Priced at $15K tuition (SpaceX collaboration) but staffed as Alpha with 1 guide per level',
-  },
-  {
-    name: 'Texas Sports Academy',
-    enrolled: 35, capacity: 1000, guidesActual: 8, guidesModel: 4, variance: 4,
-    annualCost: 566000, avgGuideSalary: 141413,
-    studentGuideRatio: '4:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'Non-Standard Ratio', status: 'over',
-    notes: 'One guide per level after prior-year performance failure; flagship recovery investment',
-  },
-  {
-    name: 'Alpha Scottsdale',
-    enrolled: 32, capacity: 38, guidesActual: 8, guidesModel: 4, variance: 4,
-    annualCost: 533000, avgGuideSalary: 133312,
-    studentGuideRatio: '4:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Temporary', status: 'over',
-    notes: 'Health leave coverage + temporary guide from Tampa + pipeline-based hiring',
-  },
-  {
-    name: 'Alpha Anywhere Center',
-    enrolled: 27, capacity: 123, guidesActual: 7, guidesModel: 4, variance: 3,
-    annualCost: 450000, avgGuideSalary: 150042,
-    studentGuideRatio: '4:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Non-Standard Ratio', status: 'over',
-    notes: 'Operating to 6:1 ratio — commitment made to New York families',
-  },
-  {
-    name: 'Nova Austin',
-    enrolled: 47, capacity: 252, guidesActual: 6, guidesModel: 4, variance: 2,
-    annualCost: 297000, avgGuideSalary: 148500,
-    studentGuideRatio: '8:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'Temporary', status: 'over',
-    notes: 'Staffed for 70+ inherited students; one guide moved to Bastrop, one coaching out',
-  },
-  {
-    name: 'Alpha Plano',
-    enrolled: 7, capacity: 25, guidesActual: 4, guidesModel: 3, variance: 1,
-    annualCost: 192000, avgGuideSalary: 192375,
-    studentGuideRatio: '2:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Temporary', status: 'over',
-    notes: 'Temp Lead Guide covering maternity leave through February',
-  },
-  {
-    name: 'Alpha Charlotte',
-    enrolled: 0, capacity: 40, guidesActual: 4, guidesModel: 3, variance: 1,
-    annualCost: 143000, avgGuideSalary: 143100,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'over',
-    notes: 'Pre-launch; 3 guides deployed to Austin, Scottsdale, NY, Miami, Dorado',
-  },
-  {
-    name: 'Alpha Houston',
-    enrolled: 0, capacity: 25, guidesActual: 4, guidesModel: 0, variance: 4,
-    annualCost: 770000, avgGuideSalary: 192375,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'over',
-    notes: 'Pre-launch; guides deployed to Austin, Santa Barbara, NY, One Hope, Dorado',
-  },
-  {
-    name: 'Waypoint Academy',
-    enrolled: 0, capacity: 25, guidesActual: 2, guidesModel: 0, variance: 2,
-    annualCost: 263000, avgGuideSalary: 131626,
-    studentGuideRatio: '0:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'Pre-Launch', status: 'over',
-    notes: 'Pre-launch; guides 100% deployed to Austin L2 + MS workshops; 1 student enrolled Jan',
-  },
-  {
-    name: 'Alpha Orlando',
-    enrolled: 0, capacity: 25, guidesActual: 1, guidesModel: 0, variance: 1,
-    annualCost: 162000, avgGuideSalary: 162001,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'over',
-    notes: 'Pre-launch; guide deployed to Spotswood NJ, NY, Dorado',
-  },
+  // --- OVER MODEL ---
+  { name: 'Alpha School: Austin Spyglass', enrolled: 161, capacity: 212, guidesActual: 32, guidesModel: 15, variance: 17,
+    annualCost: 2858000, avgGuideSalary: 168117, totalGuideCost: 5379758, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '5:1', modelRatio: '11:1', schoolType: 'Alpha', driver: 'Training Hub', status: 'over',
+    notes: 'Always overstaffed — training grounds for guides deployed network-wide' },
+  { name: 'Alpha School: Miami', enrolled: 67, capacity: 184, guidesActual: 10, guidesModel: 6, variance: 4,
+    annualCost: 939000, avgGuideSalary: 234738, totalGuideCost: 2347375, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '7:1', modelRatio: '11:1', schoolType: 'Alpha', driver: 'Timing', status: 'over',
+    notes: 'Hired proactively as enrollment approached trigger thresholds across 5 levels' },
+  { name: 'Alpha High School: Austin', enrolled: 50, capacity: 206, guidesActual: 8, guidesModel: 4, variance: 4,
+    annualCost: 678000, avgGuideSalary: 169425, totalGuideCost: 1355400, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '6:1', modelRatio: '11:1', schoolType: 'Alpha', driver: 'Training Hub', status: 'over',
+    notes: 'Austin training hub — guides trained here before deployment' },
+  { name: 'Alpha School: Brownsville', enrolled: 40, capacity: 55, guidesActual: 9, guidesModel: 4, variance: 5,
+    annualCost: 897000, avgGuideSalary: 179358, totalGuideCost: 1614223, tuition: 10000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '4:1', modelRatio: '25:1', schoolType: 'Alpha', driver: 'Non-Standard Ratio', status: 'over',
+    notes: 'Priced at $15K tuition (SpaceX) but staffed as Alpha with 1 guide per level' },
+  { name: 'Texas Sports Academy', enrolled: 35, capacity: 1000, guidesActual: 8, guidesModel: 4, variance: 4,
+    annualCost: 566000, avgGuideSalary: 141413, totalGuideCost: 1131300, tuition: 25000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '4:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'Non-Standard Ratio', status: 'over',
+    notes: 'One guide per level after prior-year performance failure' },
+  { name: 'Alpha Scottsdale', enrolled: 32, capacity: 38, guidesActual: 8, guidesModel: 4, variance: 4,
+    annualCost: 533000, avgGuideSalary: 133312, totalGuideCost: 1066500, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '4:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Temporary', status: 'over',
+    notes: 'Health leave coverage + temporary guide from Tampa + pipeline-based hiring' },
+  { name: 'Alpha Anywhere Center', enrolled: 27, capacity: 123, guidesActual: 7, guidesModel: 4, variance: 3,
+    annualCost: 450000, avgGuideSalary: 150042, totalGuideCost: 1050295, tuition: 65000, tuitionTier: '$50K+',
+    studentGuideRatio: '4:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Non-Standard Ratio', status: 'over',
+    notes: 'Operating to 6:1 ratio — commitment made to New York families' },
+  { name: 'Nova Austin', enrolled: 47, capacity: 252, guidesActual: 6, guidesModel: 4, variance: 2,
+    annualCost: 297000, avgGuideSalary: 148500, totalGuideCost: 891000, tuition: 15000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '8:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'Temporary', status: 'over',
+    notes: 'Staffed for 70+ inherited students; one guide moved to Bastrop, one coaching out' },
+  { name: 'Alpha Plano', enrolled: 7, capacity: 25, guidesActual: 4, guidesModel: 3, variance: 1,
+    annualCost: 192000, avgGuideSalary: 192375, totalGuideCost: 769501, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '2:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Temporary', status: 'over',
+    notes: 'Temp Lead Guide covering maternity leave through February' },
+  { name: 'Alpha Charlotte', enrolled: 0, capacity: 40, guidesActual: 4, guidesModel: 3, variance: 1,
+    annualCost: 143000, avgGuideSalary: 143100, totalGuideCost: 572401, tuition: 45000, tuitionTier: '$50K+',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'over',
+    notes: 'Pre-launch; guides deployed to Austin, Scottsdale, NY, Miami, Dorado' },
+  { name: 'Alpha Houston', enrolled: 0, capacity: 25, guidesActual: 4, guidesModel: 0, variance: 4,
+    annualCost: 770000, avgGuideSalary: 192375, totalGuideCost: 769501, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'over',
+    notes: 'Pre-launch; guides deployed to Austin, Santa Barbara, NY, One Hope, Dorado' },
+  { name: 'Waypoint Academy', enrolled: 0, capacity: 25, guidesActual: 2, guidesModel: 0, variance: 2,
+    annualCost: 263000, avgGuideSalary: 131626, totalGuideCost: 263251, tuition: 30000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '0:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'Pre-Launch', status: 'over',
+    notes: 'Pre-launch; guides 100% deployed to Austin L2 + MS workshops' },
+  { name: 'Alpha Orlando', enrolled: 0, capacity: 25, guidesActual: 1, guidesModel: 0, variance: 1,
+    annualCost: 162000, avgGuideSalary: 162001, totalGuideCost: 162001, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'over',
+    notes: 'Pre-launch; guide deployed to Spotswood NJ, NY, Dorado' },
   // --- AT MODEL ---
-  {
-    name: 'GT School: Georgetown',
-    enrolled: 21, capacity: 180, guidesActual: 4, guidesModel: 4, variance: 0,
-    annualCost: 0, avgGuideSalary: 141413,
-    studentGuideRatio: '5:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'At Model', status: 'at',
-    notes: 'At model; one guide per level',
-  },
-  {
-    name: 'Alpha Fort Worth',
-    enrolled: 11, capacity: 18, guidesActual: 4, guidesModel: 4, variance: 0,
-    annualCost: 0, avgGuideSalary: 138375,
-    studentGuideRatio: '3:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'Now at model (was +1); enrollment grew 9→11',
-  },
-  {
-    name: 'NextGen',
-    enrolled: 10, capacity: 80, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 148500,
-    studentGuideRatio: '3:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'At Model', status: 'at',
-    notes: 'At model',
-  },
-  {
-    name: 'Alpha San Francisco',
-    enrolled: 19, capacity: 68, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '6:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'At model',
-  },
-  {
-    name: 'Alpha Bushy Creek',
-    enrolled: 16, capacity: 25, guidesActual: 2, guidesModel: 2, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '8:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'New school; appears to be rebrand of Montessorium Brushy Creek',
-  },
-  {
-    name: 'Alpha Lake Forest',
-    enrolled: 12, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '4:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'At model; enrollment grew 5→12',
-  },
-  {
-    name: 'Alpha Palm Beach',
-    enrolled: 7, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '2:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'At model',
-  },
-  {
-    name: 'Alpha Chantilly',
-    enrolled: 4, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '1:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'At model',
-  },
-  {
-    name: 'Alpha Raleigh',
-    enrolled: 0, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'At model; 2 guides deployed to Miami through end of school year',
-  },
-  {
-    name: 'Alpha Santa Barbara',
-    enrolled: 12, capacity: 78, guidesActual: 3, guidesModel: 3, variance: 0,
-    annualCost: 0, avgGuideSalary: 150000,
-    studentGuideRatio: '4:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
-    notes: 'At model; ramping up',
-  },
+  { name: 'GT School: Georgetown', enrolled: 21, capacity: 180, guidesActual: 4, guidesModel: 4, variance: 0,
+    annualCost: 0, avgGuideSalary: 135000, totalGuideCost: 540000, tuition: 25000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '5:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'At Model', status: 'at',
+    notes: 'At model; one guide per level' },
+  { name: 'Alpha Fort Worth', enrolled: 11, capacity: 18, guidesActual: 4, guidesModel: 4, variance: 0,
+    annualCost: 0, avgGuideSalary: 138375, totalGuideCost: 553500, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '3:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model (was +1); guide cost = 126% of revenue at current enrollment' },
+  { name: 'NextGen', enrolled: 10, capacity: 80, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 157500, totalGuideCost: 472500, tuition: 25000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '3:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'At Model', status: 'at',
+    notes: 'At model' },
+  { name: 'Alpha San Francisco', enrolled: 19, capacity: 68, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 202509, totalGuideCost: 607527, tuition: 75000, tuitionTier: '$50K+',
+    studentGuideRatio: '6:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model' },
+  { name: 'Alpha Bushy Creek', enrolled: 16, capacity: 25, guidesActual: 2, guidesModel: 2, variance: 0,
+    annualCost: 0, avgGuideSalary: 150000, totalGuideCost: 0, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '8:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'Rebrand of Montessorium Brushy Creek' },
+  { name: 'Alpha Lake Forest', enrolled: 12, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 154801, totalGuideCost: 464402, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '4:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model; enrollment grew 5→12' },
+  { name: 'Alpha Palm Beach', enrolled: 7, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 97065, totalGuideCost: 291195, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '2:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model' },
+  { name: 'Alpha Chantilly', enrolled: 4, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 159300, totalGuideCost: 477900, tuition: 65000, tuitionTier: '$50K+',
+    studentGuideRatio: '1:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model' },
+  { name: 'Alpha Raleigh', enrolled: 0, capacity: 25, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 161996, totalGuideCost: 485989, tuition: 45000, tuitionTier: '$50K+',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model; 2 guides deployed to Miami' },
+  { name: 'Alpha Santa Barbara', enrolled: 12, capacity: 78, guidesActual: 3, guidesModel: 3, variance: 0,
+    annualCost: 0, avgGuideSalary: 231993, totalGuideCost: 695978, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '4:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'At Model', status: 'at',
+    notes: 'At model; ramping up' },
   // --- UNDER MODEL ---
-  {
-    name: 'Nova Bastrop',
-    enrolled: 15, capacity: 18, guidesActual: 3, guidesModel: 4, variance: -1,
-    annualCost: -162000, avgGuideSalary: 162009,
-    studentGuideRatio: '5:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'Underhiring', status: 'under',
-    notes: 'One position unfilled; quality risk if enrollment grows',
-  },
-  {
-    name: 'Alpha Tampa',
-    enrolled: 0, capacity: 25, guidesActual: 1, guidesModel: 3, variance: -2,
-    annualCost: -270000, avgGuideSalary: 135000,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'under',
-    notes: 'Pre-launch; both guides deployed to Miami, Scottsdale, Palm Beach, SF, BTX',
-  },
-  {
-    name: 'Montessorium Brushy Creek',
-    enrolled: 16, capacity: 25, guidesActual: 0, guidesModel: 2, variance: -2,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '13:1',
-    schoolType: 'Montessorium', driver: 'Staffing Gap', status: 'under',
-    notes: 'Guides appear to have moved to Alpha Bushy Creek',
-  },
+  { name: 'Nova Bastrop', enrolled: 15, capacity: 18, guidesActual: 3, guidesModel: 4, variance: -1,
+    annualCost: -162000, avgGuideSalary: 162009, totalGuideCost: 486027, tuition: 15000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '5:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'Underhiring', status: 'under',
+    notes: 'One position unfilled; quality risk if enrollment grows' },
+  { name: 'Alpha Tampa', enrolled: 0, capacity: 25, guidesActual: 1, guidesModel: 3, variance: -2,
+    annualCost: -270000, avgGuideSalary: 135000, totalGuideCost: 135000, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'under',
+    notes: 'Pre-launch; guide deployed to Miami, Scottsdale, Palm Beach, SF, BTX' },
+  { name: 'Montessorium Brushy Creek', enrolled: 16, capacity: 25, guidesActual: 0, guidesModel: 2, variance: -2,
+    annualCost: 0, avgGuideSalary: 202500, totalGuideCost: 405000, tuition: 25000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '0:1', modelRatio: '13:1', schoolType: 'Montessorium', driver: 'Staffing Gap', status: 'under',
+    notes: 'Guides appear to have moved to Alpha Bushy Creek' },
   // --- ZERO ACTIVITY ---
-  {
-    name: 'Alpha Denver',
-    enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
-    notes: 'Pre-launch; no staff assigned',
-  },
-  {
-    name: 'Alpha Maryland Bethesda',
-    enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
-    notes: 'Pre-launch; no staff assigned',
-  },
-  {
-    name: 'Alpha Folsom',
-    enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
-    notes: 'Pre-launch; no staff assigned',
-  },
-  {
-    name: 'Alpha Puerto Rico',
-    enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
-    notes: 'Pre-launch; no staff assigned',
-  },
-  {
-    name: 'Alpha Piedmont',
-    enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '8:1',
-    schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
-    notes: 'Pre-launch; no staff assigned',
-  },
-  {
-    name: 'Alpha Brownsville Preschool',
-    enrolled: 5, capacity: 20, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '25:1',
-    schoolType: 'Alpha', driver: 'At Model', status: 'at',
-    notes: 'New; split from Brownsville main; no dedicated staff',
-  },
-  {
-    name: 'Sports Academy: Carrollton',
-    enrolled: 0, capacity: 0, guidesActual: 0, guidesModel: 0, variance: 0,
-    annualCost: 0, avgGuideSalary: 0,
-    studentGuideRatio: '0:1', modelRatio: '25:1',
-    schoolType: 'Non-Alpha', driver: 'At Model', status: 'at',
-    notes: 'No activity',
-  },
+  { name: 'Alpha Denver', enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
+    notes: 'Pre-launch; no staff assigned' },
+  { name: 'Alpha Maryland Bethesda', enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 50000, tuitionTier: '$50K+',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
+    notes: 'Pre-launch; no staff assigned' },
+  { name: 'Alpha Folsom', enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
+    notes: 'Pre-launch; no staff assigned' },
+  { name: 'Alpha Puerto Rico', enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
+    notes: 'Pre-launch; no staff assigned' },
+  { name: 'Alpha Piedmont', enrolled: 0, capacity: 25, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 40000, tuitionTier: '$40K',
+    studentGuideRatio: '0:1', modelRatio: '8:1', schoolType: 'Alpha Microschool', driver: 'Pre-Launch', status: 'at',
+    notes: 'Pre-launch; no staff assigned' },
+  { name: 'Alpha Brownsville Preschool', enrolled: 5, capacity: 20, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 10000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '0:1', modelRatio: '25:1', schoolType: 'Alpha', driver: 'At Model', status: 'at',
+    notes: 'New; split from Brownsville main; no dedicated staff' },
+  { name: 'Sports Academy: Carrollton', enrolled: 0, capacity: 0, guidesActual: 0, guidesModel: 0, variance: 0,
+    annualCost: 0, avgGuideSalary: 0, totalGuideCost: 0, tuition: 25000, tuitionTier: 'Sub-$40K',
+    studentGuideRatio: '0:1', modelRatio: '25:1', schoolType: 'Non-Alpha', driver: 'At Model', status: 'at',
+    notes: 'No activity' },
 ];
 
 // ============================================================================
@@ -419,6 +293,59 @@ export function getDriverSummaries(): DriverSummary[] {
       color: g.color,
     }))
     .sort((a, b) => b.annualCost - a.annualCost);
+}
+
+// ============================================================================
+// TUITION TIER ANALYSIS
+// ============================================================================
+
+export interface TuitionTierSummary {
+  tier: TuitionTier;
+  schools: number;
+  enrolled: number;
+  guides: number;
+  modelGuides: number;
+  ratio: number;
+  avgSalary: number;
+  totalGuideCost: number;
+  revenue: number;
+  guideCostPerStudent: number;
+  guidePctRevenue: number;
+  modelCost: number;
+  excessCost: number;
+  color: string;
+}
+
+export function getTuitionTierSummaries(): TuitionTierSummary[] {
+  const tiers: TuitionTier[] = ['$40K', '$50K+', 'Sub-$40K'];
+  const colors: Record<TuitionTier, string> = { '$40K': '#f59e0b', '$50K+': '#8b5cf6', 'Sub-$40K': '#06b6d4' };
+
+  return tiers.map(tier => {
+    const active = schools.filter(s => s.tuitionTier === tier && (s.guidesActual > 0 || s.enrolled > 0));
+    const enrolled = active.reduce((s, x) => s + x.enrolled, 0);
+    const guides = active.reduce((s, x) => s + x.guidesActual, 0);
+    const modelGuides = active.reduce((s, x) => s + x.guidesModel, 0);
+    const totalGuideCost = active.reduce((s, x) => s + x.totalGuideCost, 0);
+    const revenue = active.reduce((s, x) => s + (x.enrolled * x.tuition), 0);
+    const modelCost = active.reduce((s, x) => s + (x.guidesModel * x.avgGuideSalary), 0);
+
+    return {
+      tier,
+      schools: active.length,
+      enrolled,
+      guides,
+      modelGuides,
+      ratio: guides > 0 ? enrolled / guides : 0,
+      avgSalary: guides > 0 ? totalGuideCost / guides : 0,
+      totalGuideCost,
+      revenue,
+      guideCostPerStudent: enrolled > 0 ? totalGuideCost / enrolled : 0,
+      guidePctRevenue: revenue > 0 ? (totalGuideCost / revenue) * 100 : 0,
+      modelCost,
+      excessCost: totalGuideCost - modelCost,
+      color: colors[tier],
+    };
+  }).filter(t => t.schools > 0);
 }
 
 // ============================================================================

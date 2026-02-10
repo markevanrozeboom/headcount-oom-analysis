@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { schools, interimAssignments, getDriverSummaries, getPortfolioMetrics, type School, type DriverCategory, type ModelStatus } from '../data/headcountData';
+import { schools, interimAssignments, getDriverSummaries, getPortfolioMetrics, getTuitionTierSummaries, type School, type DriverCategory, type ModelStatus, type SchoolType, type TuitionTier } from '../data/headcountData';
 
 // ============================================================================
 // HELPERS
@@ -27,7 +27,7 @@ const statusDot = (s: ModelStatus) => {
 // TYPES
 // ============================================================================
 
-type Tab = 'overview' | 'drivers' | 'schools' | 'interim';
+type Tab = 'overview' | 'drivers' | 'schools' | 'tuition' | 'interim';
 type StatusFilter = 'all' | 'over' | 'at' | 'under';
 type SortKey = 'name' | 'enrolled' | 'guidesActual' | 'variance' | 'annualCost';
 
@@ -68,6 +68,7 @@ const HeadcountDashboard: React.FC = () => {
 
   const metrics = useMemo(() => getPortfolioMetrics(), []);
   const drivers = useMemo(() => getDriverSummaries(), []);
+  const tuitionTiers = useMemo(() => getTuitionTierSummaries(), []);
 
   const filteredSchools = useMemo(() => {
     let list = [...schools];
@@ -120,6 +121,7 @@ const HeadcountDashboard: React.FC = () => {
     { id: 'overview', label: 'Executive Overview', icon: '📊' },
     { id: 'drivers', label: 'Driver Analysis', icon: '🎯' },
     { id: 'schools', label: 'School Detail', icon: '📋' },
+    { id: 'tuition', label: 'Tuition Tier Analysis', icon: '💰' },
     { id: 'interim', label: 'Interim Assignments', icon: '🔄' },
   ];
 
@@ -408,9 +410,11 @@ const HeadcountDashboard: React.FC = () => {
         )}
 
         {/* ================================================================
-            SCHOOLS TAB — grouped by Over / At / Under model
+            SCHOOLS TAB — grouped by Over / At / Under model, then by School Type
             ================================================================ */}
         {tab === 'schools' && (() => {
+          const schoolTypes: SchoolType[] = ['Alpha', 'Alpha Microschool', 'Non-Alpha', 'Montessorium'];
+
           const schoolTableHead = (
             <thead>
               <tr>
@@ -422,7 +426,6 @@ const HeadcountDashboard: React.FC = () => {
                   ['variance', 'Variance'],
                   ['annualCost', 'Annual Cost'],
                   ['', 'Ratio'],
-                  ['', 'Type'],
                   ['', 'Driver'],
                 ] as [string, string][]).map(([key, label]) => (
                   <th key={label}
@@ -453,10 +456,21 @@ const HeadcountDashboard: React.FC = () => {
                 {s.annualCost !== 0 ? fmt(s.annualCost) : '—'}
               </td>
               <td className="text-right px-4 py-2.5 text-slate-400">{s.enrolled > 0 ? s.studentGuideRatio : '—'}</td>
-              <td className="text-right px-4 py-2.5">
-                <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">{s.schoolType}</span>
-              </td>
               <td className="text-right px-4 py-2.5 text-xs text-slate-500">{s.driver}</td>
+            </tr>
+          );
+
+          const categorySubtotalRow = (label: string, list: School[]) => (
+            <tr className="bg-slate-700/30 border-t border-slate-600/30">
+              <td className="px-4 py-2 pl-8 text-slate-400 text-xs font-medium">{label} ({list.length})</td>
+              <td className="text-right px-4 py-2 font-mono text-xs">{list.reduce((s, x) => s + x.enrolled, 0)}</td>
+              <td className="text-right px-4 py-2 font-mono text-xs">{list.reduce((s, x) => s + x.guidesActual, 0)}</td>
+              <td className="text-right px-4 py-2 font-mono text-xs text-slate-500">{list.reduce((s, x) => s + x.guidesModel, 0)}</td>
+              <td className={`text-right px-4 py-2 font-mono text-xs ${varianceClass(list.reduce((s, x) => s + x.variance, 0))}`}>
+                {varianceText(list.reduce((s, x) => s + x.variance, 0))}
+              </td>
+              <td className="text-right px-4 py-2 font-mono text-xs">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
+              <td colSpan={2}></td>
             </tr>
           );
 
@@ -470,7 +484,7 @@ const HeadcountDashboard: React.FC = () => {
                 {varianceText(list.reduce((s, x) => s + x.variance, 0))}
               </td>
               <td className="text-right px-4 py-2.5 font-mono">{fmt(list.filter(x => x.annualCost > 0).reduce((s, x) => s + x.annualCost, 0))}</td>
-              <td colSpan={3}></td>
+              <td colSpan={2}></td>
             </tr>
           );
 
@@ -479,6 +493,25 @@ const HeadcountDashboard: React.FC = () => {
             ...(statusFilter === 'all' || statusFilter === 'at' ? [{ label: 'At Model', color: 'text-slate-300', badge: 'bg-slate-700 text-slate-300', list: atSchools }] : []),
             ...(statusFilter === 'all' || statusFilter === 'under' ? [{ label: 'Under Model', color: 'text-emerald-400', badge: 'bg-emerald-900/40 text-emerald-300', list: underSchools }] : []),
           ];
+
+          // Group schools by type within a list
+          const groupByType = (list: School[]) => {
+            const groups: { type: SchoolType; schools: School[] }[] = [];
+            for (const type of schoolTypes) {
+              const typeSchools = list.filter(s => s.schoolType === type);
+              if (typeSchools.length > 0) {
+                groups.push({ type, schools: typeSchools });
+              }
+            }
+            return groups;
+          };
+
+          const typeColors: Record<SchoolType, string> = {
+            'Alpha': 'text-blue-400',
+            'Alpha Microschool': 'text-purple-400',
+            'Non-Alpha': 'text-orange-400',
+            'Montessorium': 'text-teal-400',
+          };
 
           return (
             <div className="space-y-6">
@@ -495,8 +528,24 @@ const HeadcountDashboard: React.FC = () => {
                     <table className="w-full text-sm whitespace-nowrap">
                       {schoolTableHead}
                       <tbody>
-                        {sec.list.map(schoolRow)}
-                        {subtotalRow(sec.label, sec.list)}
+                        {groupByType(sec.list).map(group => (
+                          <React.Fragment key={group.type}>
+                            {/* Category Header Row */}
+                            <tr className="bg-slate-800/80">
+                              <td colSpan={8} className="px-4 py-2">
+                                <span className={`text-xs font-semibold uppercase tracking-wider ${typeColors[group.type]}`}>
+                                  {group.type}
+                                </span>
+                                <span className="text-xs text-slate-500 ml-2">({group.schools.length})</span>
+                              </td>
+                            </tr>
+                            {/* Schools in this category */}
+                            {group.schools.map(schoolRow)}
+                            {/* Category subtotal */}
+                            {categorySubtotalRow(group.type, group.schools)}
+                          </React.Fragment>
+                        ))}
+                        {subtotalRow(sec.label + ' Total', sec.list)}
                       </tbody>
                     </table>
                   </div>
@@ -515,6 +564,140 @@ const HeadcountDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+          );
+        })()}
+
+        {/* ================================================================
+            TUITION TIER TAB
+            ================================================================ */}
+        {tab === 'tuition' && (() => {
+          const tierSchools = (tier: TuitionTier) => schools.filter(s => s.tuitionTier === tier && (s.guidesActual > 0 || s.enrolled > 0));
+
+          return (
+            <>
+              {/* TIER COMPARISON KPIs */}
+              <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
+                <h3 className="text-sm font-semibold text-amber-400 mb-1">Are $40K schools delivering lower guide costs?</h3>
+                <p className="text-xs text-slate-500 mb-4">The $40K microschool model assumes 8:1 ratio and lower salaries to hit target unit economics. This compares actual guide cost as a percentage of tuition revenue across tiers.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-slate-500 uppercase">
+                        <th className="text-left px-4 py-2">Tier</th>
+                        <th className="text-right px-3 py-2">Schools</th>
+                        <th className="text-right px-3 py-2">Enrolled</th>
+                        <th className="text-right px-3 py-2">Guides</th>
+                        <th className="text-right px-3 py-2">Ratio</th>
+                        <th className="text-right px-3 py-2">Avg Salary</th>
+                        <th className="text-right px-3 py-2">Guide$/Student</th>
+                        <th className="text-right px-3 py-2 font-semibold text-amber-400">Guide % Rev</th>
+                        <th className="text-right px-3 py-2">Model Cost</th>
+                        <th className="text-right px-3 py-2">Excess Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tuitionTiers.map(t => (
+                        <tr key={t.tier} className="border-t border-slate-700/30 hover:bg-slate-700/30">
+                          <td className="px-4 py-3 font-medium">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{ background: t.color }} />
+                            {t.tier}
+                          </td>
+                          <td className="text-right px-3 py-3">{t.schools}</td>
+                          <td className="text-right px-3 py-3 font-mono">{t.enrolled}</td>
+                          <td className="text-right px-3 py-3 font-mono">{t.guides}</td>
+                          <td className="text-right px-3 py-3">{t.ratio.toFixed(1)}:1</td>
+                          <td className="text-right px-3 py-3 font-mono">{fmt(t.avgSalary)}</td>
+                          <td className="text-right px-3 py-3 font-mono">{t.enrolled > 0 ? fmt(t.guideCostPerStudent) : '—'}</td>
+                          <td className={`text-right px-3 py-3 font-mono font-bold ${t.guidePctRevenue > 80 ? 'text-red-400' : t.guidePctRevenue > 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {t.revenue > 0 ? `${t.guidePctRevenue.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="text-right px-3 py-3 font-mono text-slate-400">{fmt(t.modelCost)}</td>
+                          <td className={`text-right px-3 py-3 font-mono ${t.excessCost > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                            {fmt(t.excessCost)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* VERDICT */}
+              <div className="bg-red-900/20 border border-red-800/40 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-red-400 mb-2">Verdict: $40K schools are NOT delivering lower guide costs</h3>
+                <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                  <li>$40K tier guide cost = <strong className="text-red-400">{tuitionTiers.find(t => t.tier === '$40K')?.guidePctRevenue.toFixed(0)}% of revenue</strong> — nearly identical to $50K+ tier ({tuitionTiers.find(t => t.tier === '$50K+')?.guidePctRevenue.toFixed(0)}%)</li>
+                  <li>At 8:1 model ratio and $155K avg salary, target guide cost should be ~$19K/student (48% of $40K tuition)</li>
+                  <li>Actual: ${tuitionTiers.find(t => t.tier === '$40K')?.guideCostPerStudent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}/student — <strong className="text-red-400">1.6x the target</strong></li>
+                  <li>Austin training hub (+21 guides) accounts for most of the overstaffing; Scottsdale adds +4 temporary</li>
+                  <li>Fort Worth is "at model" but guide cost = 126% of revenue because only 11 students enrolled against 4 guides</li>
+                </ul>
+              </div>
+
+              {/* PER-TIER SCHOOL DETAIL */}
+              {(['$40K', '$50K+', 'Sub-$40K'] as TuitionTier[]).map(tier => {
+                const ts = tierSchools(tier);
+                if (ts.length === 0) return null;
+                const tierInfo = tuitionTiers.find(t => t.tier === tier);
+                return (
+                  <div key={tier} className="table-card">
+                    <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="w-3 h-3 rounded-full" style={{ background: tierInfo?.color }} />
+                        <div>
+                          <span className="text-sm font-semibold text-white">{tier} Tuition Tier</span>
+                          <span className="text-xs text-slate-500 ml-2">{ts.length} schools · Guide cost = {tierInfo?.guidePctRevenue.toFixed(0)}% of revenue</span>
+                        </div>
+                      </div>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-slate-500 uppercase">
+                          <th className="text-left px-5 py-2">School</th>
+                          <th className="text-right px-3 py-2">Tuition</th>
+                          <th className="text-right px-3 py-2">Enrolled</th>
+                          <th className="text-right px-3 py-2">Guides</th>
+                          <th className="text-right px-3 py-2">Model</th>
+                          <th className="text-right px-3 py-2">Var</th>
+                          <th className="text-right px-3 py-2">Guide Payroll</th>
+                          <th className="text-right px-3 py-2">Avg/Guide</th>
+                          <th className="text-right px-3 py-2">$/Student</th>
+                          <th className="text-right px-3 py-2 text-amber-400">% Rev</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ts.sort((a, b) => b.totalGuideCost - a.totalGuideCost).map(s => {
+                          const rev = s.enrolled * s.tuition;
+                          const pct = rev > 0 ? (s.totalGuideCost / rev) * 100 : 0;
+                          const perStudent = s.enrolled > 0 ? s.totalGuideCost / s.enrolled : 0;
+                          return (
+                            <tr key={s.name} className="border-t border-slate-700/30 hover:bg-slate-700/30">
+                              <td className="px-5 py-2.5">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${statusDot(s.status)}`} />
+                                  <span className="text-slate-200">{s.name}</span>
+                                </div>
+                              </td>
+                              <td className="text-right px-3 py-2.5 font-mono">${(s.tuition / 1000).toFixed(0)}K</td>
+                              <td className="text-right px-3 py-2.5 font-mono">{s.enrolled || '—'}</td>
+                              <td className="text-right px-3 py-2.5 font-mono">{s.guidesActual}</td>
+                              <td className="text-right px-3 py-2.5 font-mono text-slate-500">{s.guidesModel}</td>
+                              <td className={`text-right px-3 py-2.5 font-mono font-semibold ${varianceClass(s.variance)}`}>{s.variance !== 0 ? varianceText(s.variance) : '—'}</td>
+                              <td className="text-right px-3 py-2.5 font-mono">{s.totalGuideCost > 0 ? fmt(s.totalGuideCost) : '—'}</td>
+                              <td className="text-right px-3 py-2.5 font-mono text-slate-400">{s.avgGuideSalary > 0 ? fmt(s.avgGuideSalary) : '—'}</td>
+                              <td className="text-right px-3 py-2.5 font-mono">{perStudent > 0 ? fmt(perStudent) : '—'}</td>
+                              <td className={`text-right px-3 py-2.5 font-mono font-semibold ${pct > 80 ? 'text-red-400' : pct > 50 ? 'text-amber-400' : pct > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                {pct > 0 ? `${pct.toFixed(0)}%` : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </>
           );
         })()}
 

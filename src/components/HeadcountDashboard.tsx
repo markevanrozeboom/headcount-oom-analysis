@@ -190,50 +190,116 @@ const HeadcountDashboard: React.FC = () => {
                       label={{ position: 'right', fill: '#cbd5e1', fontSize: 11, formatter: (v: number) => fmt(v) }} />
                   </BarChart>
                 </ResponsiveContainer>
+
+                {/* Cost/Student mini-table under the chart */}
+                <table className="w-full text-xs mt-4 border-t border-slate-700/50">
+                  <thead>
+                    <tr className="text-slate-500 uppercase">
+                      <th className="text-left px-3 py-2">School</th>
+                      <th className="text-right px-3 py-2">OOM Cost</th>
+                      <th className="text-right px-3 py-2">Enrolled</th>
+                      <th className="text-right px-3 py-2">Cost / Student</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schools
+                      .filter(s => s.variance > 0)
+                      .sort((a, b) => b.annualCost - a.annualCost)
+                      .slice(0, 8)
+                      .map(s => (
+                        <tr key={s.name} className="border-t border-slate-700/20">
+                          <td className="px-3 py-1.5 text-slate-300">{s.name.replace(/^Alpha (School: )?/, '').replace(' Academy', '')}</td>
+                          <td className="text-right px-3 py-1.5 font-mono text-amber-400">{fmt(s.annualCost)}</td>
+                          <td className="text-right px-3 py-1.5 font-mono">{s.enrolled || '—'}</td>
+                          <td className="text-right px-3 py-1.5 font-mono font-semibold text-white">
+                            {s.enrolled > 0 ? fmt(s.annualCost / s.enrolled) : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* PER STUDENT AT CAPACITY TABLE */}
-            <div className="table-card">
-              <div className="px-5 py-4 border-b border-slate-700">
-                <h3 className="text-sm font-semibold text-slate-300">OOM Cost per Student at Capacity</h3>
-                <p className="text-xs text-slate-500 mt-1">What each excess guide costs spread across capacity seats — shows the burden on unit economics</p>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left px-5 py-3 text-xs uppercase">School</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Capacity</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Enrolled</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Excess</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">Annual OOM</th>
-                    <th className="text-right px-4 py-3 text-xs uppercase">OOM / Cap Student</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {perCapData.map(s => (
-                    <tr key={s.name} className="border-t border-slate-700/20 hover:bg-slate-700/30">
-                      <td className="px-5 py-2.5 text-slate-200">{s.name}</td>
-                      <td className="text-right px-4 py-2.5 font-mono">{s.capacity}</td>
-                      <td className="text-right px-4 py-2.5 font-mono">{s.enrolled}</td>
-                      <td className="text-right px-4 py-2.5 font-mono text-red-400">+{s.variance}</td>
-                      <td className="text-right px-4 py-2.5 font-mono">{fmt(s.annualCost)}</td>
-                      <td className="text-right px-4 py-2.5 font-mono font-semibold text-amber-400">{fmt(s.costPerCapStudent)}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-bold border-t border-slate-600">
-                    <td className="px-5 py-3">TOTAL</td>
-                    <td className="text-right px-4 py-3 font-mono">{perCapData.reduce((s, x) => s + x.capacity, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono">{perCapData.reduce((s, x) => s + x.enrolled, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono text-red-400">+{perCapData.reduce((s, x) => s + x.variance, 0)}</td>
-                    <td className="text-right px-4 py-3 font-mono">{fmt(perCapData.reduce((s, x) => s + x.annualCost, 0))}</td>
-                    <td className="text-right px-4 py-3 font-mono text-amber-400">
-                      {fmt(perCapData.reduce((s, x) => s + x.annualCost, 0) / Math.max(perCapData.reduce((s, x) => s + x.capacity, 0), 1))}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            {/* PER STUDENT AT CAPACITY TABLE — grouped by school type */}
+            {(() => {
+              const typeOrder: SchoolType[] = ['Alpha', 'Alpha Microschool', 'Non-Alpha', 'Montessorium'];
+              const typeColors: Record<SchoolType, string> = { 'Alpha': 'text-indigo-400', 'Alpha Microschool': 'text-cyan-400', 'Non-Alpha': 'text-emerald-400', 'Montessorium': 'text-slate-400' };
+              const groups = typeOrder
+                .map(t => ({ type: t, schools: perCapData.filter(s => s.schoolType === t) }))
+                .filter(g => g.schools.length > 0);
+
+              const capHeader = (
+                <tr>
+                  <th className="text-left px-5 py-3 text-xs uppercase">School</th>
+                  <th className="text-right px-4 py-3 text-xs uppercase">Capacity</th>
+                  <th className="text-right px-4 py-3 text-xs uppercase">Enrolled</th>
+                  <th className="text-right px-4 py-3 text-xs uppercase">Excess</th>
+                  <th className="text-right px-4 py-3 text-xs uppercase">Annual OOM</th>
+                  <th className="text-right px-4 py-3 text-xs uppercase">OOM / Cap Student</th>
+                </tr>
+              );
+
+              return (
+                <div className="table-card">
+                  <div className="px-5 py-4 border-b border-slate-700">
+                    <h3 className="text-sm font-semibold text-slate-300">OOM Cost per Student at Capacity</h3>
+                    <p className="text-xs text-slate-500 mt-1">Excess guide cost spread across capacity seats, grouped by school type</p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>{capHeader}</thead>
+                    <tbody>
+                      {groups.map(g => {
+                        const gCap = g.schools.reduce((s, x) => s + x.capacity, 0);
+                        const gEnr = g.schools.reduce((s, x) => s + x.enrolled, 0);
+                        const gVar = g.schools.reduce((s, x) => s + x.variance, 0);
+                        const gCost = g.schools.reduce((s, x) => s + x.annualCost, 0);
+                        return (
+                          <React.Fragment key={g.type}>
+                            {/* Group header */}
+                            <tr className="border-t-2 border-slate-600/70">
+                              <td colSpan={6} className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider ${typeColors[g.type]}`}>
+                                {g.type} ({g.schools.length})
+                              </td>
+                            </tr>
+                            {g.schools.map(s => (
+                              <tr key={s.name} className="border-t border-slate-700/20 hover:bg-slate-700/30">
+                                <td className="px-5 py-2.5 text-slate-200 pl-8">{s.name}</td>
+                                <td className="text-right px-4 py-2.5 font-mono">{s.capacity}</td>
+                                <td className="text-right px-4 py-2.5 font-mono">{s.enrolled}</td>
+                                <td className="text-right px-4 py-2.5 font-mono text-red-400">+{s.variance}</td>
+                                <td className="text-right px-4 py-2.5 font-mono">{fmt(s.annualCost)}</td>
+                                <td className="text-right px-4 py-2.5 font-mono font-semibold text-amber-400">{fmt(s.costPerCapStudent)}</td>
+                              </tr>
+                            ))}
+                            {/* Subtotal */}
+                            <tr className="bg-slate-800/70">
+                              <td className="px-5 py-2 text-xs font-semibold text-slate-400 pl-8">{g.type} subtotal</td>
+                              <td className="text-right px-4 py-2 font-mono text-xs">{gCap}</td>
+                              <td className="text-right px-4 py-2 font-mono text-xs">{gEnr}</td>
+                              <td className="text-right px-4 py-2 font-mono text-xs text-red-400">+{gVar}</td>
+                              <td className="text-right px-4 py-2 font-mono text-xs">{fmt(gCost)}</td>
+                              <td className="text-right px-4 py-2 font-mono text-xs text-amber-400">{fmt(gCap > 0 ? gCost / gCap : 0)}</td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
+                      {/* Portfolio total */}
+                      <tr className="font-bold border-t-2 border-slate-500">
+                        <td className="px-5 py-3">PORTFOLIO</td>
+                        <td className="text-right px-4 py-3 font-mono">{perCapData.reduce((s, x) => s + x.capacity, 0)}</td>
+                        <td className="text-right px-4 py-3 font-mono">{perCapData.reduce((s, x) => s + x.enrolled, 0)}</td>
+                        <td className="text-right px-4 py-3 font-mono text-red-400">+{perCapData.reduce((s, x) => s + x.variance, 0)}</td>
+                        <td className="text-right px-4 py-3 font-mono">{fmt(perCapData.reduce((s, x) => s + x.annualCost, 0))}</td>
+                        <td className="text-right px-4 py-3 font-mono text-amber-400">
+                          {fmt(perCapData.reduce((s, x) => s + x.annualCost, 0) / Math.max(perCapData.reduce((s, x) => s + x.capacity, 0), 1))}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
 
             {/* DRIVER SUMMARY TABLE */}
             <div className="table-card">
